@@ -1,5 +1,5 @@
-import useAuthStore from '../store/authStore.js'
+import { useAuthContext } from '../contexts/AuthContext.jsx'
 
 export default function useAuth() {
-  return useAuthStore()
+  return useAuthContext()
 }

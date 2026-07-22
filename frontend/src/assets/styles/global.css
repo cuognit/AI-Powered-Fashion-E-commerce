@@ -11,3 +11,30 @@
 body {
   margin: 0;
 }
+
+button,
+input {
+  font: inherit;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.auth-dark-form input {
+  color: white;
+  border-color: rgb(82 82 82);
+}
+
+.auth-dark-form input:focus {
+  border-color: white;
+}
+
+.auth-dark-form label > span:first-child {
+  color: rgb(163 163 163);
+}
+
+.auth-dark-form svg {
+  color: rgb(115 115 115);
+}
