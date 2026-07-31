@@ -8,7 +8,6 @@ import Cart from '../pages/shop/Cart.jsx'
 import Checkout from '../pages/shop/Checkout.jsx'
 import Home from '../pages/shop/Home.jsx'
 import ProductDetail from '../pages/shop/ProductDetail.jsx'
-import ProductList from '../pages/shop/ProductList.jsx'
 import Collections from '../pages/shop/Collections.jsx'
 import NewArrivals from '../pages/shop/NewArrivals.jsx'
 import AITryOn from '../pages/shop/AITryOn.jsx'
@@ -25,7 +24,7 @@ const router = createBrowserRouter([
       { path: '/collections', element: <Collections /> },
       { path: '/new-arrivals', element: <NewArrivals /> },
       { path: '/ai-try-on', element: <AITryOn /> },
-      { path: '/products', element: <ProductList /> },
+      { path: '/products', element: <Collections /> },
       { path: '/products/:id', element: <ProductDetail /> },
       
       { path: '/privacy', element: <InfoPage title="Privacy Policy" description="How AESTHETIX protects your data & privacy." /> },

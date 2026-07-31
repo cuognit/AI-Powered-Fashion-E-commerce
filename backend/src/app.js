@@ -21,6 +21,7 @@ app.get('/api/health', (_request, response) => {
 })
 
 app.use('/api', apiRoutes)
+app.use('/api/v1', apiRoutes)
 app.use(notFound)
 app.use(errorHandler)
 
