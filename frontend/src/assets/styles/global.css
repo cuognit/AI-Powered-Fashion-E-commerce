@@ -1,13 +1,135 @@
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800&family=Inter:wght@400;500;700&display=swap');
 @import "tailwindcss";
 
-:root {
-  font-family: Inter, system-ui, sans-serif;
+@theme {
+  --color-on-tertiary-fixed: #2f1500;
+  --color-primary-fixed: #e5e2e1;
+  --color-on-primary: #ffffff;
+  --color-primary-container: #1c1b1b;
+  --color-on-primary-fixed-variant: #474646;
+  --color-error: #ba1a1a;
+  --color-surface-bright: #fbf9f9;
+  --color-error-container: #ffdad6;
+  --color-tertiary: #000000;
+  --color-inverse-on-surface: #f2f0f0;
+  --color-on-surface: #1b1c1c;
+  --color-on-background: #1b1c1c;
+  --color-secondary-fixed-dim: #c6c7c3;
+  --color-on-tertiary-container: #c76c00;
+  --color-surface-container-highest: #e3e2e2;
+  --color-surface-variant: #e3e2e2;
+  --color-on-tertiary-fixed-variant: #6e3900;
+  --color-secondary-fixed: #e2e3df;
+  --color-surface: #fbf9f9;
+  --color-inverse-surface: #303031;
+  --color-secondary: #5d5f5c;
+  --color-on-primary-fixed: #1c1b1b;
+  --color-secondary-container: #e2e3df;
+  --color-outline: #747878;
+  --color-surface-dim: #dbdad9;
+  --color-on-secondary-fixed: #1a1c1a;
+  --color-surface-container-low: #f5f3f3;
+  --color-surface-container-lowest: #ffffff;
+  --color-tertiary-container: #2f1500;
+  --color-on-primary-container: #858383;
+  --color-background: #fbf9f9;
+  --color-primary: #000000;
+  --color-surface-container: #efeded;
+  --color-surface-container-high: #e8e7e7;
+  --color-primary-fixed-dim: #c8c6c5;
+  --color-surface-tint: #5f5e5e;
+  --color-on-tertiary: #ffffff;
+  --color-on-error: #ffffff;
+  --color-on-error-container: #93000a;
+  --color-on-secondary: #ffffff;
+  --color-outline-variant: #c4c7c7;
+  --color-on-surface-variant: #444748;
+  --color-on-secondary-container: #636562;
+  --color-tertiary-fixed-dim: #ffb77d;
+  --color-inverse-primary: #c8c6c5;
+  --color-ai-accent: #A5F3FC;
+
+  --font-headline-xl: "Montserrat", sans-serif;
+  --font-body-md: "Inter", sans-serif;
+  --font-label-caps: "Inter", sans-serif;
+  --font-headline-xl-mobile: "Montserrat", sans-serif;
+  --font-display-lg: "Montserrat", sans-serif;
+  --font-body-lg: "Inter", sans-serif;
+  --font-headline-md: "Montserrat", sans-serif;
+  --font-technical-mono: "Inter", sans-serif;
+
+  --spacing-stack-sm: 12px;
+  --spacing-stack-lg: 64px;
+  --spacing-margin-mobile: 16px;
+  --spacing-margin-desktop: 48px;
+  --spacing-container-max: 1440px;
+  --spacing-gutter: 24px;
+  --spacing-stack-md: 24px;
 }
 
-* {
-  box-sizing: border-box;
+@layer utilities {
+  .text-headline-xl {
+    font-size: 40px;
+    line-height: 48px;
+    letter-spacing: -0.02em;
+    font-weight: 700;
+  }
+  .text-body-md {
+    font-size: 16px;
+    line-height: 24px;
+    font-weight: 400;
+  }
+  .text-label-caps {
+    font-size: 12px;
+    line-height: 16px;
+    letter-spacing: 0.1em;
+    font-weight: 700;
+  }
+  .text-headline-md {
+    font-size: 24px;
+    line-height: 32px;
+    font-weight: 600;
+  }
+  .text-technical-mono {
+    font-size: 13px;
+    line-height: 18px;
+    font-weight: 500;
+  }
+
+  .glass-ai {
+    background: rgba(165, 243, 252, 0.1);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(165, 243, 252, 0.3);
+  }
+  .custom-scrollbar::-webkit-scrollbar {
+    width: 4px;
+  }
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: #f1f1f1;
+  }
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #000;
+  }
 }
 
 body {
-  margin: 0;
+  @apply bg-background text-on-background font-body-md overflow-x-hidden;
+}
+
+/* Authentication Dark Form styles (from legacy code) */
+.auth-dark-form input {
+  color: white;
+  border-color: rgb(82 82 82);
+}
+
+.auth-dark-form input:focus {
+  border-color: white;
+}
+
+.auth-dark-form label > span:first-child {
+  color: rgb(163 163 163);
+}
+
+.auth-dark-form svg {
+  color: rgb(115 115 115);
 }

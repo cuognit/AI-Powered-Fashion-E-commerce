@@ -1,0 +1,96 @@
+import { useState } from 'react'
+import { Link } from 'react-router-dom'
+import { Globe, Fingerprint, Box } from 'lucide-react'
+import { LanguageModal, SecurityModal, ARModal } from './FooterModals'
+
+export default function Footer() {
+  const [activeModal, setActiveModal] = useState(null) // 'lang' | 'security' | 'ar' | null
+
+  const footerLinks = [
+    { name: 'Privacy Policy', path: '/privacy' },
+    { name: 'Terms of Service', path: '/terms' },
+    { name: 'Shipping Info', path: '/shipping' },
+    { name: 'Contact Us', path: '/contact' },
+  ]
+
+  return (
+    <footer className="w-full bg-[#f2f2f2] text-gray-900 pt-12 pb-10 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto flex flex-col items-center">
+        
+        {/* Top: Brand Logo Centered */}
+        <Link 
+          to="/" 
+          className="text-xl sm:text-2xl font-black tracking-widest text-black uppercase hover:opacity-80 transition mb-6 font-sans"
+        >
+          AESTHETIX
+        </Link>
+
+        {/* Middle: Footer Links Row */}
+        <nav className="flex flex-wrap justify-center items-center gap-x-6 sm:gap-x-10 gap-y-2 mb-6 text-center">
+          {footerLinks.map((link) => (
+            <Link
+              key={link.path}
+              to={link.path}
+              className="text-xs sm:text-sm font-semibold text-gray-700 hover:text-black transition tracking-wide"
+            >
+              {link.name}
+            </Link>
+          ))}
+        </nav>
+
+        {/* Subtle Horizontal Divider */}
+        <div className="w-full border-t border-gray-300/80 my-6 sm:my-8 max-w-4xl" />
+
+        {/* Copyright Text */}
+        <p className="text-[11px] sm:text-xs text-gray-500 font-medium tracking-wider uppercase text-center mb-6">
+          © 2024 AESTHETIX AI FASHION. ALL RIGHTS RESERVED.
+        </p>
+
+        {/* Bottom Centered Interactive Icons Trio */}
+        <div className="flex items-center justify-center space-x-6 sm:space-x-8 text-black">
+          <button
+            onClick={() => setActiveModal('lang')}
+            className="p-1 text-gray-800 hover:text-black transition transform hover:scale-110 cursor-pointer"
+            title="Language & Region Selector"
+            aria-label="Language & Region Selector"
+          >
+            <Globe className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.8]" />
+          </button>
+
+          <button
+            onClick={() => setActiveModal('security')}
+            className="p-1 text-gray-800 hover:text-black transition transform hover:scale-110 cursor-pointer"
+            title="AI Security & Biometric Protection"
+            aria-label="AI Security & Biometric Protection"
+          >
+            <Fingerprint className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.8]" />
+          </button>
+
+          <button
+            onClick={() => setActiveModal('ar')}
+            className="p-1 text-gray-800 hover:text-black transition transform hover:scale-110 cursor-pointer"
+            title="3D & AR Fitting Engine"
+            aria-label="3D & AR Fitting Engine"
+          >
+            <Box className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.8]" />
+          </button>
+        </div>
+
+      </div>
+
+      {/* Modals */}
+      <LanguageModal 
+        isOpen={activeModal === 'lang'} 
+        onClose={() => setActiveModal(null)} 
+      />
+      <SecurityModal 
+        isOpen={activeModal === 'security'} 
+        onClose={() => setActiveModal(null)} 
+      />
+      <ARModal 
+        isOpen={activeModal === 'ar'} 
+        onClose={() => setActiveModal(null)} 
+      />
+    </footer>
+  )
+}
