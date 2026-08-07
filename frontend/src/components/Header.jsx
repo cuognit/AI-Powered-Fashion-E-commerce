@@ -52,7 +52,7 @@ export default function Header() {
   const handleSearchSubmit = (e) => {
     e.preventDefault()
     if (searchQuery.trim()) {
-      navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`)
+      navigate(`/shop?q=${encodeURIComponent(searchQuery.trim())}`)
     }
   }
 
