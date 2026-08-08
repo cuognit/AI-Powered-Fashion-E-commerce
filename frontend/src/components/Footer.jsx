@@ -15,25 +15,27 @@ export default function Footer() {
 
   return (
     <footer className="w-full bg-[#f2f2f2] text-gray-900 pt-12 pb-10 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-7xl mx-auto flex flex-col items-center">
+      <div className="max-w-[1360px] mx-auto flex flex-col items-center">
         
-        {/* Top: Brand Logo Centered */}
+        {/* Top: Brand Logo Centered (Clickable Link to Home) */}
         <Link 
           to="/" 
-          className="text-xl sm:text-2xl font-black tracking-widest text-black uppercase hover:opacity-80 transition mb-6 font-sans"
+          className="group relative inline-block text-xl sm:text-2xl font-black tracking-widest text-black uppercase hover:opacity-85 transition mb-6 font-sans"
         >
-          AESTHETIX
+          <span>AESTHETIX</span>
+          <span className="absolute -bottom-1 left-0 w-full h-[2px] bg-black scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out origin-left" />
         </Link>
 
-        {/* Middle: Footer Links Row */}
-        <nav className="flex flex-wrap justify-center items-center gap-x-6 sm:gap-x-10 gap-y-2 mb-6 text-center">
+        {/* Middle: Footer Links Row with Left-to-Right Sliding Underline Hover Effect */}
+        <nav className="flex flex-wrap justify-center items-center gap-x-6 sm:gap-x-10 gap-y-3 mb-6 text-center">
           {footerLinks.map((link) => (
             <Link
               key={link.path}
               to={link.path}
-              className="text-xs sm:text-sm font-semibold text-gray-700 hover:text-black transition tracking-wide"
+              className="group relative py-1 text-xs sm:text-sm font-semibold text-gray-700 hover:text-black transition tracking-wide"
             >
-              {link.name}
+              <span>{link.name}</span>
+              <span className="absolute bottom-0 left-0 w-full h-[1.5px] bg-black scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out origin-left" />
             </Link>
           ))}
         </nav>

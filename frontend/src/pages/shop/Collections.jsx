@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import axiosClient from '../../services/axiosClient';
+import SemanticSearchBar from '../../components/SemanticSearchBar.jsx';
 import { 
   SlidersHorizontal, 
   Search, 
@@ -16,7 +17,9 @@ import {
   Tag,
   Ruler,
   Palette,
-  Banknote
+  Banknote,
+  Cpu,
+  CheckCircle2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -43,7 +46,16 @@ function ProductCard({ product, onClick }) {
           <div className="absolute top-4 left-4 flex flex-col gap-2">
             <span className="glass-ai px-3 py-1 rounded-full font-technical-mono text-[10px] text-primary flex items-center gap-1 bg-white/20">
               <Sparkles className="w-[14px] h-[14px] fill-current" />
-              AI RECOMMENDATION
+              AI EMBEDDED
+            </span>
+          </div>
+        )}
+
+        {product.score !== undefined && (
+          <div className="absolute top-4 right-4 flex flex-col gap-2">
+            <span className="px-2.5 py-1 rounded-full font-technical-mono text-[10px] font-bold text-white bg-purple-600/90 backdrop-blur-xs flex items-center gap-1 shadow-sm">
+              <Sparkles className="w-[12px] h-[12px] fill-current" />
+              {Math.round(product.score * 100)}% MATCH
             </span>
           </div>
         )}
@@ -82,10 +94,19 @@ export default function Collections() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [seeding, setSeeding] = useState(false);
+  const [searchMode, setSearchMode] = useState(null); // 'semantic' | 'keyword_fallback' | null
+  const [searchSuggestions, setSearchSuggestions] = useState([
+    'Áo chống nắng UPF 50+',
+    'Đồ bơi bikini đi biển',
+    'Áo sơ mi lụa công sở',
+    'Set đồ tập gym yoga',
+    'Đầm dạ tiệc cao cấp',
+    'Áo thun streetwear unisex'
+  ]);
 
   // Read URL search params
   const [searchParams, setSearchParams] = useSearchParams();
-  const initialSearch = searchParams.get('search') || '';
+  const initialSearch = searchParams.get('q') || searchParams.get('search') || '';
 
   // Filters state
   const [searchTerm, setSearchTerm] = useState(initialSearch);
@@ -103,39 +124,42 @@ export default function Collections() {
   // Quick View Modal
   const [selectedProduct, setSelectedProduct] = useState(null);
 
-  // Sync state when URL search param changes (e.g. from header search bar)
-  useEffect(() => {
-    const query = searchParams.get('search') || '';
-    setSearchTerm(query);
-    setCurrentPage(1);
-  }, [searchParams]);
-
-  // Update URL search parameters alongside state
-  const handleSearchChange = (value) => {
-    setSearchTerm(value);
-    if (value) {
-      setSearchParams({ search: value });
-    } else {
-      setSearchParams({});
-    }
-    setCurrentPage(1);
-  };
-
-  const fetchProducts = async () => {
+  const fetchProducts = async (query = '') => {
     setLoading(true);
     try {
-      const response = await axiosClient.get('/products');
-      if (response.data.success) {
-        setProducts(response.data.data);
+      let response;
+      if (query && query.trim()) {
+        // Gọi API Smart Semantic Search (với cơ chế Fallback tự động ở backend)
+        response = await axiosClient.get(`/search/semantic?q=${encodeURIComponent(query.trim())}&limit=50`);
+        if (response.data.success) {
+          setProducts(response.data.data || []);
+          setSearchMode(response.data.search_mode);
+          if (response.data.meta?.suggestions?.length > 0) {
+            setSearchSuggestions(response.data.meta.suggestions);
+          }
+        }
+      } else {
+        response = await axiosClient.get('/products');
+        if (response.data.success) {
+          setProducts(response.data.data || []);
+          setSearchMode(null);
+        }
       }
     } catch (error) {
       console.error("Lỗi gọi API products từ axiosClient, đang thử gọi trực tiếp:", error);
       // Fallback
       try {
-        const response = await fetch('http://localhost:5000/api/products');
+        const url = query && query.trim() 
+          ? `http://localhost:5000/api/v1/search/semantic?q=${encodeURIComponent(query.trim())}&limit=50`
+          : 'http://localhost:5000/api/products';
+        const response = await fetch(url);
         const data = await response.json();
         if (data.success) {
-          setProducts(data.data);
+          setProducts(data.data || []);
+          setSearchMode(data.search_mode || null);
+          if (data.meta?.suggestions?.length > 0) {
+            setSearchSuggestions(data.meta.suggestions);
+          }
         }
       } catch (fallbackError) {
         console.error("Lỗi gọi API trực tiếp:", fallbackError);
@@ -146,9 +170,24 @@ export default function Collections() {
     }
   };
 
+  // Sync state when URL search param changes (e.g. from header search bar or SemanticSearchBar)
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    const query = searchParams.get('q') || searchParams.get('search') || '';
+    setSearchTerm(query);
+    setCurrentPage(1);
+    fetchProducts(query);
+  }, [searchParams]);
+
+  // Update URL search parameters alongside state
+  const handleSearchChange = (value) => {
+    setSearchTerm(value);
+    if (value) {
+      setSearchParams({ q: value });
+    } else {
+      setSearchParams({});
+    }
+    setCurrentPage(1);
+  };
 
   // Handle seeding database
   const handleSeedData = async () => {
@@ -259,29 +298,25 @@ export default function Collections() {
   // Filter and sort products based on active sidebar controls
   const filteredProducts = products
     .filter(product => {
-      // 1. Search term filter
-      const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
-                            product.description.toLowerCase().includes(searchTerm.toLowerCase());
-      
-      // 2. Category filter
+      // 1. Category filter
       const catType = getProductCategoryType(product);
-      const matchesCategory = selectedCategories.includes(catType);
+      const matchesCategory = selectedCategories.length === 0 || selectedCategories.includes(catType);
       
-      // 3. Brand filter
+      // 2. Brand filter
       const matchesBrand = selectedBrands.includes('All') || selectedBrands.includes(product.brand);
       
-      // 4. Size filter
+      // 3. Size filter
       const matchesSize = !selectedSize || (product.variants && product.variants.some(v => v.size.toUpperCase() === selectedSize.toUpperCase() && v.stock > 0));
       
-      // 5. Color filter
+      // 4. Color filter
       const matchesColor = !selectedColor || (product.variants && product.variants.some(v => v.color.toLowerCase() === selectedColor.toLowerCase()));
 
-      // 6. Price filter (represented as USD where $1 = 25,000 VND)
+      // 5. Price filter (represented as USD where $1 = 25,000 VND)
       const currentPrice = product.sale_price !== null && product.sale_price !== undefined ? product.sale_price : product.base_price;
-      const currentPriceUsd = currentPrice / 25000;
+      const currentPriceUsd = (currentPrice || 0) / 25000;
       const matchesPrice = currentPriceUsd <= maxPriceUsd;
 
-      return matchesSearch && matchesCategory && matchesBrand && matchesSize && matchesColor && matchesPrice;
+      return matchesCategory && matchesBrand && matchesSize && matchesColor && matchesPrice;
     })
     .sort((a, b) => {
       const getPrice = (p) => p.sale_price !== null && p.sale_price !== undefined ? p.sale_price : p.base_price;
@@ -493,20 +528,53 @@ export default function Collections() {
         </aside>
         
         {/* Catalog Section */}
-        <section className="flex-1 py-10 min-w-0">
-          <header className="mb-10 flex flex-col md:flex-row md:items-end justify-between gap-4">
+        <section className="flex-1 py-6 md:py-10 min-w-0">
+          {/* Top Smart Semantic Search Bar */}
+          <div className="mb-8 p-5 bg-gradient-to-r from-gray-50 via-white to-gray-50 border border-gray-200/80 rounded-2xl shadow-xs">
+            <div className="flex items-center gap-2 mb-3">
+              <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 border border-purple-200">
+                <Sparkles className="w-3.5 h-3.5 text-purple-600 animate-pulse" />
+                AI Smart Semantic Search
+              </span>
+              <span className="text-xs text-gray-500 hidden sm:inline">
+                • Tìm kiếm bằng ngôn ngữ tự nhiên, cảm xúc, phong cách thời trang
+              </span>
+            </div>
+            <SemanticSearchBar 
+              targetPath="/shop"
+              placeholder="Thử gõ: 'áo sơ mi trắng dự tiệc thanh lịch', 'đầm hoa mùa hè vintage', 'streetwear oversize'..."
+              onSearch={(val) => handleSearchChange(val)}
+            />
+          </div>
+
+          <header className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
-              <span className="font-technical-mono text-[12px] text-outline uppercase tracking-[0.3em]">Browsing Catalog</span>
+              <div className="flex items-center gap-2">
+                <span className="font-technical-mono text-[12px] text-outline uppercase tracking-[0.3em]">Browsing Catalog</span>
+                {searchMode === 'semantic' && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">
+                    <Sparkles className="w-3 h-3 text-purple-500" />
+                    Chế độ: AI Semantic Match
+                  </span>
+                )}
+                {searchMode === 'keyword_fallback' && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                    <CheckCircle2 className="w-3 h-3 text-amber-600" />
+                    Chế độ: Keyword Fallback
+                  </span>
+                )}
+              </div>
+
               <h1 className="font-headline-xl text-headline-xl text-primary mt-2">
-                {searchTerm ? `Search results for "${searchTerm}"` : "Curated Collections"}
+                {searchTerm ? `Kết quả tìm kiếm cho "${searchTerm}"` : "Curated Collections"}
               </h1>
-              <p className="text-on-surface-variant mt-2 font-body-md">
-                Showing {filteredProducts.length} curated pieces that match your aesthetic profile.
+              <p className="text-on-surface-variant mt-1 font-body-md text-sm">
+                Tìm thấy {filteredProducts.length} sản phẩm phù hợp phong cách của bạn.
               </p>
             </div>
             
             {/* Sorting */}
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 shrink-0">
               <span className="font-label-caps text-label-caps text-on-surface-variant whitespace-nowrap">Sort by:</span>
               <select 
                 value={sortBy}
@@ -535,22 +603,56 @@ export default function Collections() {
                 </div>
               ))}
             </div>
+          ) : products.length === 0 && searchTerm ? (
+            /* AI Empty Search State */
+            <div className="text-center py-14 px-6 bg-gradient-to-b from-purple-50/50 to-surface-container-low rounded-2xl border border-purple-100 max-w-2xl mx-auto">
+              <div className="h-14 w-14 bg-purple-100/80 rounded-full flex items-center justify-center mx-auto mb-4 text-purple-600 shadow-sm">
+                <Sparkles className="h-6 w-6" />
+              </div>
+              <h3 className="text-lg font-bold text-primary">
+                Không tìm thấy sản phẩm thời trang nào khớp với "{searchTerm}"
+              </h3>
+              <p className="text-on-surface-variant text-xs mt-2 mb-6 max-w-md mx-auto leading-relaxed">
+                Hệ thống AI không tìm thấy trang phục hoặc phụ kiện liên quan đến từ khóa này trong danh mục thời trang hiện tại. Bạn có thể tham khảo các từ khóa xu hướng dưới đây:
+              </p>
+              
+              {/* Popular Suggestions Pills */}
+              <div className="flex flex-wrap justify-center gap-2 mb-6 max-w-lg mx-auto">
+                {searchSuggestions.map((sug, idx) => (
+                  <button
+                    key={idx}
+                    onClick={() => handleSearchChange(sug)}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-medium bg-white text-purple-700 border border-purple-200 hover:bg-purple-600 hover:text-white hover:border-purple-600 shadow-2xs transition-all cursor-pointer"
+                  >
+                    <Sparkles className="w-3 h-3" />
+                    {sug}
+                  </button>
+                ))}
+              </div>
+
+              <button
+                onClick={() => handleSearchChange('')}
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white text-xs font-semibold tracking-wider uppercase hover:opacity-85 transition-all cursor-pointer rounded-lg"
+              >
+                Xem toàn bộ bộ sưu tập
+              </button>
+            </div>
           ) : products.length === 0 ? (
             /* Database is empty - Seed prompt */
             <div className="text-center py-16 bg-surface-container-low rounded-2xl border border-outline-variant p-6 max-w-xl mx-auto">
               <div className="h-14 w-14 bg-amber-50 rounded-full flex items-center justify-center mx-auto mb-4 text-amber-500">
                 <Database className="h-6 w-6" />
               </div>
-              <h3 className="text-lg font-bold text-primary">No Products in Database</h3>
+              <h3 className="text-lg font-bold text-primary">Chưa có sản phẩm trong Database</h3>
               <p className="text-outline text-xs mt-2 mb-6 max-w-sm mx-auto leading-relaxed">
-                Your MongoDB Atlas collection is currently empty. Click the button below to seed sample high-quality products.
+                MongoDB Atlas hiện chưa có dữ liệu sản phẩm mẫu. Nhấn nút bên dưới để tự động tạo 26 sản phẩm thời trang cao cấp kèm Vector AI Embeddings.
               </p>
               <button
                 onClick={handleSeedData}
                 disabled={seeding}
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-primary text-white text-xs font-semibold tracking-wider uppercase hover:opacity-85 disabled:bg-slate-300 transition-all cursor-pointer"
               >
-                {seeding ? "Seeding..." : "Seed Database"}
+                {seeding ? "Đang tạo dữ liệu..." : "Tạo dữ liệu mẫu (Seed Database)"}
               </button>
             </div>
           ) : filteredProducts.length === 0 ? (
@@ -559,8 +661,8 @@ export default function Collections() {
               <div className="h-10 w-10 bg-surface rounded-full flex items-center justify-center mx-auto mb-3 text-outline">
                 <Search className="h-5 w-5" />
               </div>
-              <h4 className="font-bold text-sm text-primary">No items match your criteria</h4>
-              <p className="text-outline text-xs mt-1">Try resetting the filters or altering your search term.</p>
+              <h4 className="font-bold text-sm text-primary">Không có sản phẩm nào khớp bộ lọc</h4>
+              <p className="text-outline text-xs mt-1">Thử bỏ bớt bộ lọc danh mục hoặc thay đổi mức giá.</p>
             </div>
           ) : (
             /* Actual Product Grid */

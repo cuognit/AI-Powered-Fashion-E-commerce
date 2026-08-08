@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom'
 import { ShoppingBag, User, Menu, X, Search } from 'lucide-react'
 import { motion } from 'framer-motion'
@@ -11,15 +11,39 @@ export default function Header() {
   const [searchQuery, setSearchQuery] = useState('')
   const [hoveredPath, setHoveredPath] = useState(null)
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
-  
+
+  // Scroll direction state
+  const [isVisible, setIsVisible] = useState(true)
+  const [lastScrollY, setLastScrollY] = useState(0)
+
   const navigate = useNavigate()
   const location = useLocation()
   const { isAuthenticated } = useAuth()
-  
+
   const cartItems = useCartStore((state) => state.items)
   const cartItemCount = cartItems.reduce((acc, item) => acc + item.quantity, 0)
 
+  useEffect(() => {
+    const handleScroll = () => {
+      const currentScrollY = window.scrollY
+      if (currentScrollY <= 20) {
+        setIsVisible(true)
+      } else if (currentScrollY > lastScrollY && currentScrollY > 60) {
+        // Cuộn xuống dưới -> Ẩn Header
+        setIsVisible(false)
+      } else if (currentScrollY < lastScrollY) {
+        // Cuộn ngược lên trên -> Hiện Header
+        setIsVisible(true)
+      }
+      setLastScrollY(currentScrollY)
+    }
+
+    window.addEventListener('scroll', handleScroll, { passive: true })
+    return () => window.removeEventListener('scroll', handleScroll)
+  }, [lastScrollY])
+
   const navItems = [
+    { name: 'Home', path: '/' },
     { name: 'Collections', path: '/collections' },
     { name: 'New Arrivals', path: '/new-arrivals' },
     { name: 'AI Try-On', path: '/ai-try-on' },
@@ -28,13 +52,15 @@ export default function Header() {
   const handleSearchSubmit = (e) => {
     e.preventDefault()
     if (searchQuery.trim()) {
-      navigate(`/products?search=${encodeURIComponent(searchQuery.trim())}`)
+      navigate(`/shop?q=${encodeURIComponent(searchQuery.trim())}`)
     }
   }
 
   return (
-    <header className="sticky top-0 z-40 w-full bg-[#f8f8f8] border-b border-gray-200/60 transition-all">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-4">
+    <header className={`sticky top-0 z-50 w-full bg-[#f8f8f8]/95 backdrop-blur-md border-b border-gray-200/60 transition-transform duration-300 ease-in-out ${
+      isVisible ? 'translate-y-0' : '-translate-y-full'
+    }`}>
+      <div className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 h-16 sm:h-20 flex items-center justify-between gap-4">
         
         {/* Left Group: Logo + Navigation Links */}
         <div className="flex items-center space-x-8 lg:space-x-12">
