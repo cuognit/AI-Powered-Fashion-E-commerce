@@ -8,6 +8,7 @@ import User from '../models/User.js'
 import { AppError } from '../utils/AppError.js'
 
 const PASSWORD_SALT_ROUNDS = 12
+const MAX_PASSWORD_CHANGES_PER_DAY = 3
 
 function toPublicUser(user) {
   return {
@@ -221,7 +222,28 @@ export async function changeUserPassword(userId, { currentPassword, newPassword 
     throw new AppError('Mật khẩu hiện tại không chính xác', 400)
   }
 
+  // Enforce daily limit
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  const todayStr = today.toISOString().slice(0, 10)
+  const lastChangeStr = user.passwordChangedAt
+    ? user.passwordChangedAt.toISOString().slice(0, 10)
+    : null
+
+  if (lastChangeStr !== todayStr) {
+    user.passwordChangeCount = 0
+  }
+
+  if (user.passwordChangeCount >= MAX_PASSWORD_CHANGES_PER_DAY) {
+    throw new AppError(
+      `Bạn chỉ được đổi mật khẩu tối đa ${MAX_PASSWORD_CHANGES_PER_DAY} lần mỗi ngày`,
+      429,
+    )
+  }
+
   user.password = await bcrypt.hash(newPassword, PASSWORD_SALT_ROUNDS)
+  user.passwordChangedAt = new Date()
+  user.passwordChangeCount += 1
   await user.save()
 
   return { message: 'Đổi mật khẩu thành công' }

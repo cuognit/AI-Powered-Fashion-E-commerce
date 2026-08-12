@@ -8,6 +8,8 @@ const userSchema = new mongoose.Schema(
     role: { type: String, enum: ['customer', 'admin'], default: 'customer' },
     phone: { type: String, trim: true, default: '' },
     address: { type: String, trim: true, default: '' },
+    passwordChangedAt: { type: Date, default: null },
+    passwordChangeCount: { type: Number, default: 0 },
   },
   { timestamps: true },
 )
