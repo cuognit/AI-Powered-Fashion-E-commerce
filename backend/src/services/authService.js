@@ -15,6 +15,8 @@ function toPublicUser(user) {
     name: user.name,
     email: user.email,
     role: user.role,
+    phone: user.phone || '',
+    address: user.address || '',
   }
 }
 
@@ -178,4 +180,49 @@ export async function revokeRefreshToken(refreshToken) {
       $set: { revoked_at: new Date() },
     },
   )
+}
+
+export async function getUserProfile(userId) {
+  const user = await User.findById(userId)
+
+  if (!user) {
+    throw new AppError('Không tìm thấy tài khoản', 404)
+  }
+
+  return { user: toPublicUser(user) }
+}
+
+export async function updateUserProfile(userId, { name, phone, address }) {
+  const user = await User.findById(userId)
+
+  if (!user) {
+    throw new AppError('Không tìm thấy tài khoản', 404)
+  }
+
+  if (name != null) user.name = name.trim()
+  if (phone != null) user.phone = phone.trim()
+  if (address != null) user.address = address.trim()
+
+  await user.save()
+
+  return { user: toPublicUser(user) }
+}
+
+export async function changeUserPassword(userId, { currentPassword, newPassword }) {
+  const user = await User.findById(userId).select('+password')
+
+  if (!user) {
+    throw new AppError('Không tìm thấy tài khoản', 404)
+  }
+
+  const passwordMatches = await bcrypt.compare(currentPassword, user.password)
+
+  if (!passwordMatches) {
+    throw new AppError('Mật khẩu hiện tại không chính xác', 400)
+  }
+
+  user.password = await bcrypt.hash(newPassword, PASSWORD_SALT_ROUNDS)
+  await user.save()
+
+  return { message: 'Đổi mật khẩu thành công' }
 }
