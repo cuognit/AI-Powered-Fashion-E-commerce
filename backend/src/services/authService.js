@@ -6,9 +6,20 @@ import env from '../config/env.js'
 import RefreshToken from '../models/RefreshToken.js'
 import User from '../models/User.js'
 import { AppError } from '../utils/AppError.js'
+import {
+  MAX_PASSWORD_CHANGES_PER_DAY,
+  passwordChangeStatus,
+  todayUtcString,
+  wasIssuedBeforePasswordChange,
+} from '../utils/passwordChange.js'
+import {
+  clearCredentialFailures,
+  credentialLockError,
+  lockStatus,
+  recordCredentialFailure,
+} from '../utils/bruteForce.js'
 
 const PASSWORD_SALT_ROUNDS = 12
-const MAX_PASSWORD_CHANGES_PER_DAY = 3
 
 function toPublicUser(user) {
   return {
@@ -106,17 +117,23 @@ export async function registerUser({ name, email, password }) {
 
 export async function loginUser({ email, password }) {
   const normalizedEmail = email.trim().toLowerCase()
+  const lockKey = `login:${normalizedEmail}`
+
+  const locked = lockStatus(lockKey)
+  if (locked) throw credentialLockError(locked.retryAfterMs)
+
   const user = await User.findOne({ email: normalizedEmail }).select('+password')
+  const passwordMatches = user?.password ? await bcrypt.compare(password, user.password) : false
 
-  if (!user) {
+  // A missing account and a wrong password share the same response and both
+  // count as a failure, so attackers cannot probe for valid accounts.
+  if (!user || !passwordMatches) {
+    const blocked = recordCredentialFailure(lockKey)
+    if (blocked) throw credentialLockError(blocked.retryAfterMs)
     throw new AppError('Invalid email or password', 401)
   }
 
-  const passwordMatches = await bcrypt.compare(password, user.password)
-
-  if (!passwordMatches) {
-    throw new AppError('Invalid email or password', 401)
-  }
+  clearCredentialFailures(lockKey)
 
   const tokens = createTokens(user)
   await saveRefreshToken(user._id, tokens.refreshToken)
@@ -157,9 +174,16 @@ export async function refreshAccessToken(refreshToken) {
     throw new AppError('Invalid or expired refresh token', 401)
   }
 
-  const user = await User.findById(payload.sub).select('_id role')
+  const user = await User.findById(payload.sub).select('_id role passwordChangedAt')
 
   if (!user) {
+    throw new AppError('Invalid or expired refresh token', 401)
+  }
+
+  // Reject refresh tokens issued before the user's last password change.
+  if (wasIssuedBeforePasswordChange(payload.iat, user.passwordChangedAt)) {
+    storedToken.revoked_at = new Date()
+    await storedToken.save()
     throw new AppError('Invalid or expired refresh token', 401)
   }
 
@@ -190,7 +214,10 @@ export async function getUserProfile(userId) {
     throw new AppError('Không tìm thấy tài khoản', 404)
   }
 
-  return { user: toPublicUser(user) }
+  return {
+    user: toPublicUser(user),
+    passwordChange: passwordChangeStatus(user),
+  }
 }
 
 export async function updateUserProfile(userId, { name, phone, address }) {
@@ -210,25 +237,30 @@ export async function updateUserProfile(userId, { name, phone, address }) {
 }
 
 export async function changeUserPassword(userId, { currentPassword, newPassword }) {
+  const lockKey = `pwd:${userId}`
+
+  const locked = lockStatus(lockKey)
+  if (locked) throw credentialLockError(locked.retryAfterMs)
+
   const user = await User.findById(userId).select('+password')
 
   if (!user) {
     throw new AppError('Không tìm thấy tài khoản', 404)
   }
 
-  const passwordMatches = await bcrypt.compare(currentPassword, user.password)
+  const passwordMatches = user.password ? await bcrypt.compare(currentPassword, user.password) : false
 
   if (!passwordMatches) {
+    const blocked = recordCredentialFailure(lockKey)
+    if (blocked) throw credentialLockError(blocked.retryAfterMs)
     throw new AppError('Mật khẩu hiện tại không chính xác', 400)
   }
 
-  // Enforce daily limit
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const todayStr = today.toISOString().slice(0, 10)
-  const lastChangeStr = user.passwordChangedAt
-    ? user.passwordChangedAt.toISOString().slice(0, 10)
-    : null
+  clearCredentialFailures(lockKey)
+
+  const passwordHash = await bcrypt.hash(newPassword, PASSWORD_SALT_ROUNDS)
+  const todayStr = todayUtcString()
+  const lastChangeStr = user.passwordChangedAt ? user.passwordChangedAt.toISOString().slice(0, 10) : null
 
   if (lastChangeStr !== todayStr) {
     user.passwordChangeCount = 0
@@ -241,10 +273,23 @@ export async function changeUserPassword(userId, { currentPassword, newPassword 
     )
   }
 
-  user.password = await bcrypt.hash(newPassword, PASSWORD_SALT_ROUNDS)
+  user.password = passwordHash
   user.passwordChangedAt = new Date()
   user.passwordChangeCount += 1
-  await user.save()
 
-  return { message: 'Đổi mật khẩu thành công' }
+  const updated = await user.save()
+
+  // Revoke every existing session (all refresh tokens), including this device's
+  // old token, then mint fresh tokens so the current session stays signed in.
+  await RefreshToken.updateMany({ user_id: userId, revoked_at: null }, { $set: { revoked_at: new Date() } })
+
+  const tokens = createTokens(updated)
+  await saveRefreshToken(userId, tokens.refreshToken)
+
+  return {
+    message: 'Đổi mật khẩu thành công',
+    user: toPublicUser(updated),
+    ...tokens,
+    passwordChange: passwordChangeStatus(updated),
+  }
 }

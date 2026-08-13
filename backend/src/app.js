@@ -8,6 +8,8 @@ import apiRoutes from './routes/index.js'
 
 const app = express()
 
+app.set('trust proxy', env.trustProxy)
+
 app.use(cors({
   origin: env.clientUrl,
   credentials: true,

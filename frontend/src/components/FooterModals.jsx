@@ -5,9 +5,9 @@ export function LanguageModal({ isOpen, onClose }) {
 
   const languages = [
     { code: 'vi', name: 'Tiếng Việt (VN)', region: 'Việt Nam', active: true },
-    { code: 'en', name: 'English (US)', region: 'United States', active: false },
-    { code: 'ja', name: '日本語 (JP)', region: 'Japan', active: false },
-    { code: 'fr', name: 'Français (FR)', region: 'France', active: false },
+    { code: 'en', name: 'Tiếng Anh (Mỹ)', region: 'Hoa Kỳ', active: false },
+    { code: 'ja', name: 'Tiếng Nhật', region: 'Nhật Bản', active: false },
+    { code: 'fr', name: 'Tiếng Pháp', region: 'Pháp', active: false },
   ]
 
   return (
@@ -25,8 +25,8 @@ export function LanguageModal({ isOpen, onClose }) {
             <Globe className="w-6 h-6 text-black" />
           </div>
           <div>
-            <h3 className="font-bold text-lg text-gray-900">Select Region & Language</h3>
-            <p className="text-xs text-gray-500">Choose your preferred shopping experience</p>
+            <h3 className="font-bold text-lg text-gray-900">Chọn khu vực và ngôn ngữ</h3>
+            <p className="text-xs text-gray-500">Chọn trải nghiệm mua sắm bạn mong muốn</p>
           </div>
         </div>
 
@@ -72,8 +72,8 @@ export function SecurityModal({ isOpen, onClose }) {
             <Fingerprint className="w-6 h-6 text-black" />
           </div>
           <div>
-            <h3 className="font-bold text-lg text-gray-900">AI Privacy & Security</h3>
-            <p className="text-xs text-gray-500">Biometric & Fit Protection</p>
+            <h3 className="font-bold text-lg text-gray-900">Quyền riêng tư và bảo mật AI</h3>
+            <p className="text-xs text-gray-500">Bảo vệ sinh trắc học và dữ liệu thử đồ</p>
           </div>
         </div>
 
@@ -81,15 +81,15 @@ export function SecurityModal({ isOpen, onClose }) {
           <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
             <ShieldCheck className="w-5 h-5 text-black shrink-0 mt-0.5" />
             <div>
-              <p className="font-medium text-gray-900">Zero Biometric Storage</p>
-              <p className="text-xs text-gray-500">Your uploaded photos and body measurements are processed on-the-fly for AI Try-On and immediately discarded.</p>
+              <p className="font-medium text-gray-900">Không lưu dữ liệu sinh trắc học</p>
+              <p className="text-xs text-gray-500">Ảnh và số đo được xử lý tức thời cho tính năng thử đồ AI rồi xóa ngay.</p>
             </div>
           </div>
           <div className="flex items-start gap-3 p-3 rounded-xl bg-gray-50 border border-gray-100">
             <Sparkles className="w-5 h-5 text-black shrink-0 mt-0.5" />
             <div>
-              <p className="font-medium text-gray-900">Encrypted Generative Pipeline</p>
-              <p className="text-xs text-gray-500">All neural render data is end-to-end encrypted with AES-256 standard protocols.</p>
+              <p className="font-medium text-gray-900">Quy trình tạo ảnh được mã hóa</p>
+              <p className="text-xs text-gray-500">Toàn bộ dữ liệu dựng ảnh được mã hóa đầu cuối theo chuẩn AES-256.</p>
             </div>
           </div>
         </div>
@@ -98,7 +98,7 @@ export function SecurityModal({ isOpen, onClose }) {
           onClick={onClose}
           className="mt-6 w-full py-3 bg-black text-white font-medium text-sm rounded-xl hover:bg-gray-800 transition cursor-pointer"
         >
-          Got it
+          Đã hiểu
         </button>
       </div>
     </div>
@@ -123,19 +123,19 @@ export function ARModal({ isOpen, onClose }) {
             <Box className="w-6 h-6 text-black" />
           </div>
           <div>
-            <h3 className="font-bold text-lg text-gray-900">3D & AR Fitting Studio</h3>
-            <p className="text-xs text-gray-500">Next-Generation Virtual Wardrobe</p>
+            <h3 className="font-bold text-lg text-gray-900">Phòng thử đồ 3D và AR</h3>
+            <p className="text-xs text-gray-500">Tủ đồ trực tuyến thế hệ mới</p>
           </div>
         </div>
 
         <div className="space-y-3 text-sm text-gray-600">
           <p>
-            AESTHETIX utilizes real-time WebGL rendering and spatial AR modeling to let you inspect fabrics, fit draping, and 360-degree textures directly on your device.
+            AESTHETIX sử dụng WebGL thời gian thực và mô hình AR không gian để bạn xem chất liệu, độ rủ và bề mặt 360 độ ngay trên thiết bị.
           </p>
           <div className="p-4 bg-black text-white rounded-xl flex items-center justify-between">
             <div>
-              <p className="font-semibold text-xs tracking-wider uppercase">Active Engine</p>
-              <p className="text-sm text-gray-300">Aesthetix Spatial Engine v2.4</p>
+              <p className="font-semibold text-xs tracking-wider uppercase">Công nghệ đang hoạt động</p>
+              <p className="text-sm text-gray-300">Công nghệ không gian AESTHETIX v2.4</p>
             </div>
             <Sparkles className="w-5 h-5 text-amber-300" />
           </div>
@@ -145,7 +145,7 @@ export function ARModal({ isOpen, onClose }) {
           onClick={onClose}
           className="mt-6 w-full py-3 bg-black text-white font-medium text-sm rounded-xl hover:bg-gray-800 transition cursor-pointer"
         >
-          Explore 3D Catalog
+          Khám phá danh mục 3D
         </button>
       </div>
     </div>

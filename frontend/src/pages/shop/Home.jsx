@@ -7,6 +7,7 @@ import heroImg from '../../assets/images/fashion_hero_banner.jpg'
 import intelligentWardrobeImg from '../../assets/images/intelligent_wardrobe_bg.jpg'
 import intelligentWardrobeImg2 from '../../assets/images/intelligent_wardrobe_bg2.jpg'
 import intelligentWardrobeImg3 from '../../assets/images/intelligent_wardrobe_bg3.jpg'
+import FavoriteButton from '../../components/FavoriteButton.jsx'
 
 export default function Home() {
   const navigate = useNavigate()
@@ -18,41 +19,41 @@ export default function Home() {
   const wardrobeTabs = {
     '01': {
       image: intelligentWardrobeImg,
-      title: 'Virtual Size Mapping',
+      title: 'Lập bản đồ kích thước ảo',
       fitScore: '98%',
-      fitDesc: 'Precision 3D body contour mapping calculated from 12 silhouette data points.',
-      badgeTitle: 'Personal Style',
+      fitDesc: 'Lập bản đồ đường nét cơ thể 3D chính xác từ 12 điểm dữ liệu vóc dáng.',
+      badgeTitle: 'Phong cách cá nhân',
       details: [
-        { label: 'Style Match', val: '96%' },
-        { label: 'Trend Relevance', val: 'High' },
-        { label: 'Occasion', val: 'Street / Casual' },
-        { label: 'Brand Affinity', val: 'Ader Error' },
+        { label: 'Độ hợp phong cách', val: '96%' },
+        { label: 'Độ hợp xu hướng', val: 'Cao' },
+        { label: 'Dịp sử dụng', val: 'Đường phố / Thường ngày' },
+        { label: 'Thương hiệu phù hợp', val: 'Ader Error' },
       ],
     },
     '02': {
       image: intelligentWardrobeImg2,
-      title: 'Dynamic Style Generation',
+      title: 'Tạo phong cách linh hoạt',
       fitScore: '95%',
-      fitDesc: 'Neural outfit synthesis algorithm matching monochrome palettes and weather trends.',
-      badgeTitle: 'Dynamic Outfit',
+      fitDesc: 'Thuật toán phối trang phục theo bảng màu đơn sắc và xu hướng thời tiết.',
+      badgeTitle: 'Trang phục linh hoạt',
       details: [
-        { label: 'Palette Match', val: '100% Monochrome' },
-        { label: 'Layering Balance', val: 'Optimal' },
-        { label: 'Silhouette', val: 'Boxy / Minimal' },
-        { label: 'Versatility', val: 'High (Day & Night)' },
+        { label: 'Độ hợp bảng màu', val: '100% đơn sắc' },
+        { label: 'Cân bằng lớp', val: 'Tối ưu' },
+        { label: 'Phom dáng', val: 'Rộng / Tối giản' },
+        { label: 'Tính linh hoạt', val: 'Cao (Ngày và đêm)' },
       ],
     },
     '03': {
       image: intelligentWardrobeImg3,
-      title: 'Predictive Tailoring',
+      title: 'May đo dự đoán',
       fitScore: '99%',
-      fitDesc: 'AI-assisted custom seam, sleeve and shoulder adjustments for tailored perfection.',
-      badgeTitle: 'Custom Fit',
+      fitDesc: 'AI hỗ trợ điều chỉnh đường may, tay áo và vai để đạt độ vừa vặn hoàn hảo.',
+      badgeTitle: 'Vừa vặn tùy chỉnh',
       details: [
-        { label: 'Sleeve Precision', val: '± 0.2 cm' },
-        { label: 'Shoulder Drop', val: 'Exact Match' },
-        { label: 'Fabric Drape', val: 'Structured Wool' },
-        { label: 'Comfort Rating', val: '9.9 / 10' },
+        { label: 'Độ chính xác tay áo', val: '± 0,2 cm' },
+        { label: 'Độ xuôi vai', val: 'Khớp chính xác' },
+        { label: 'Độ rủ vải', val: 'Len định hình' },
+        { label: 'Điểm thoải mái', val: '9,9 / 10' },
       ],
     },
   }
@@ -100,40 +101,42 @@ export default function Home() {
   // Fallback items matching image design if DB products are loading/empty
   const fallbackFeatured1 = {
     _id: products[0]?._id || 'feat-1',
-    name: products[0]?.name || 'Modular Trench Coat',
-    category: 'TECH-CORE',
-    price: products[0]?.base_price ? formatPrice(products[0].base_price, '$450.00') : '$450.00',
+    name: products[0]?.name || 'Áo trench mô-đun',
+    category: 'CÔNG NGHỆ',
+    price: products[0]?.base_price ? formatPrice(products[0].base_price, '450.000 ₫') : '450.000 ₫',
     image: products[0]?.images?.[0] || 'https://images.unsplash.com/photo-1544441893-675973e31985?w=1000&q=80',
+    product: products[0] || null,
   }
 
   const fallbackFeatured2 = {
     _id: products[1]?._id || 'feat-2',
-    name: products[1]?.name || 'Oversized Hoodie',
-    price: products[1]?.base_price ? formatPrice(products[1].base_price, '$180.00') : '$180.00',
+    name: products[1]?.name || 'Áo hoodie phom rộng',
+    price: products[1]?.base_price ? formatPrice(products[1].base_price, '180.000 ₫') : '180.000 ₫',
     image: products[1]?.images?.[0] || 'https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=800&q=80',
+    product: products[1] || null,
   }
 
   const fallbackNewArrivals = [
     {
       _id: products[2]?._id || 'na-1',
-      category: 'BOTTOMS',
-      name: products[2]?.name || 'Cargo V1',
-      price: products[2]?.base_price ? formatPrice(products[2].base_price, '$240') : '$240',
+      category: 'QUẦN',
+      name: products[2]?.name || 'Quần cargo V1',
+      price: products[2]?.base_price ? formatPrice(products[2].base_price, '240.000 ₫') : '240.000 ₫',
       image: products[2]?.images?.[0] || 'https://images.unsplash.com/photo-1624378439575-d8705ad7ae80?w=600&q=80',
-      badge: 'NEW',
+      badge: 'MỚI',
     },
     {
       _id: products[3]?._id || 'na-2',
-      category: 'OUTERWEAR',
-      name: products[3]?.name || 'Utility Vest',
-      price: products[3]?.base_price ? formatPrice(products[3].base_price, '$160') : '$160',
+      category: 'ÁO KHOÁC',
+      name: products[3]?.name || 'Áo ghi-lê tiện dụng',
+      price: products[3]?.base_price ? formatPrice(products[3].base_price, '160.000 ₫') : '160.000 ₫',
       image: products[3]?.images?.[0] || 'https://images.unsplash.com/photo-1509631179647-0177331693ae?w=600&q=80',
     },
     {
       _id: products[4]?._id || 'na-3',
-      category: 'ACCESSORIES',
-      name: products[4]?.name || 'Matte Sling',
-      price: products[4]?.base_price ? formatPrice(products[4].base_price, '$95') : '$95',
+      category: 'PHỤ KIỆN',
+      name: products[4]?.name || 'Túi đeo chéo nhám',
+      price: products[4]?.base_price ? formatPrice(products[4].base_price, '95.000 ₫') : '95.000 ₫',
       image: products[4]?.images?.[0] || 'https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=600&q=80',
     },
     {
@@ -153,6 +156,7 @@ export default function Home() {
         price: formatPrice(p.base_price, `$${200 + idx * 40}`),
         image: p.images?.[0] || fallbackNewArrivals[idx].image,
         badge: idx === 0 ? 'NEW' : null,
+        product: p,
       }))
     : fallbackNewArrivals
 
@@ -167,7 +171,7 @@ export default function Home() {
           <div className="absolute inset-0 z-0 overflow-hidden">
             <motion.img
               src={heroImg}
-              alt="Future of Fit Virtual Try-On"
+              alt="Trải nghiệm thử đồ trực tuyến"
               initial={{ scale: 1 }}
               animate={{ scale: [1, 1.07, 1] }}
               transition={{ repeat: Infinity, duration: 18, ease: 'easeInOut' }}
@@ -201,7 +205,7 @@ export default function Home() {
                 className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white/10 backdrop-blur-md border border-white/20 text-white text-[11px] font-bold uppercase tracking-widest"
               >
                 <Sparkles className="w-3.5 h-3.5 text-white animate-spin-slow" />
-                <span>AI Neural Fitting Engine v2.4</span>
+                <span>Công nghệ thử đồ AI v2.4</span>
               </motion.div>
 
               {/* Main Headline */}
@@ -211,9 +215,9 @@ export default function Home() {
                 transition={{ duration: 0.7, delay: 0.3 }}
                 className="text-4xl sm:text-6xl lg:text-7xl font-extrabold uppercase tracking-tight text-white leading-[1.05] drop-shadow-lg"
               >
-                Future of Fit: <br />
+                Tương lai vừa vặn: <br />
                 <span className="bg-gradient-to-r from-white via-gray-200 to-gray-400 bg-clip-text text-transparent">
-                  Virtual Try-On
+                  Thử đồ trực tuyến
                 </span>
               </motion.h1>
 
@@ -227,7 +231,7 @@ export default function Home() {
                   to="/ai-try-on"
                   className="group relative inline-flex items-center gap-3 bg-white hover:bg-gray-100 text-black border border-white text-xs sm:text-sm font-bold tracking-widest uppercase px-8 py-4 rounded-none shadow-2xl transition-all duration-300 transform hover:-translate-y-1 hover:shadow-white/20"
                 >
-                  <span>Try It Now</span>
+                  <span>Thử ngay</span>
                   <motion.span
                     animate={{ x: [0, 4, 0] }}
                     transition={{ repeat: Infinity, duration: 1.5, ease: 'easeInOut' }}
@@ -258,7 +262,7 @@ export default function Home() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Find a pastel beach outfit for men..."
+                placeholder="Tìm trang phục nam màu pastel đi biển..."
                 className="w-full bg-transparent text-base sm:text-lg text-gray-900 placeholder-gray-400 focus:outline-none font-medium"
               />
               <button
@@ -266,7 +270,7 @@ export default function Home() {
                 className="shrink-0 bg-black text-white border border-black hover:bg-gray-800 text-xs sm:text-sm font-bold tracking-wide px-6 py-3 rounded-none transition flex items-center gap-2 shadow-xs group"
               >
                 <Sparkles className="w-4 h-4 text-white group-hover:rotate-12 transition-transform" />
-                <span>AI Search</span>
+                <span>Tìm kiếm AI</span>
               </button>
             </form>
           </motion.div>
@@ -287,17 +291,17 @@ export default function Home() {
           >
             <div>
               <span className="text-[11px] font-bold tracking-widest text-gray-600 uppercase block mb-1">
-                Curated Selection
+                Tuyển chọn dành riêng
               </span>
               <h2 className="text-2xl sm:text-4xl font-extrabold uppercase tracking-tight text-gray-800">
-                Featured Pieces
+                Sản phẩm nổi bật
               </h2>
             </div>
             <Link
               to="/collections"
               className="text-xs font-bold uppercase tracking-wider text-gray-700 underline underline-offset-4 hover:text-black transition"
             >
-              View All
+              Xem tất cả
             </Link>
           </motion.div>
 
@@ -313,6 +317,7 @@ export default function Home() {
             >
               <Link to={`/collections`} className="block w-full">
                 <div className="relative w-full h-[380px] sm:h-[480px] overflow-hidden rounded-none bg-[#eaeaea] mb-4 shadow-lg group-hover:shadow-2xl transition-shadow duration-500">
+                  {fallbackFeatured1.product && <FavoriteButton product={fallbackFeatured1.product} className="absolute right-3 top-3 z-20" />}
                   <img
                     src={fallbackFeatured1.image}
                     alt={fallbackFeatured1.name}
@@ -345,6 +350,7 @@ export default function Home() {
             >
               <Link to={`/collections`} className="block w-full">
                 <div className="relative w-full h-[300px] sm:h-[370px] overflow-hidden rounded-none bg-[#eaeaea] mb-4 shadow-md group-hover:shadow-xl transition-shadow duration-500">
+                  {fallbackFeatured2.product && <FavoriteButton product={fallbackFeatured2.product} className="absolute right-3 top-3 z-20" />}
                   <img
                     src={fallbackFeatured2.image}
                     alt={fallbackFeatured2.name}
@@ -428,7 +434,7 @@ export default function Home() {
                     <Sparkles className="w-3.5 h-3.5 text-white" />
                   </div>
                   <span className="font-semibold text-xs uppercase tracking-wider text-white">
-                    AI Fit Score: {currentTab.fitScore}
+                    Điểm vừa vặn AI: {currentTab.fitScore}
                   </span>
                 </div>
                 <p className="text-[11px] leading-relaxed text-gray-200 font-normal">
@@ -448,11 +454,11 @@ export default function Home() {
           >
             <div>
               <h2 className="text-4xl sm:text-5xl lg:text-6xl font-black uppercase tracking-tight text-black leading-[0.95] mb-6 text-left">
-                INTELLIGENT <br />
-                WARDROBE
+                TỦ ĐỒ <br />
+                THÔNG MINH
               </h2>
               <p className="text-sm sm:text-base text-gray-700 leading-relaxed max-w-lg font-normal text-left">
-                Our proprietary AI learns your aesthetic signature to suggest pieces that integrate seamlessly with your current collection. No more guesswork, just curated precision.
+                AI của chúng tôi học phong cách riêng của bạn để gợi ý những sản phẩm phù hợp liền mạch với tủ đồ hiện tại. Không còn phỏng đoán, chỉ còn những lựa chọn chính xác.
               </p>
             </div>
 
@@ -474,9 +480,9 @@ export default function Home() {
               className="space-y-4 pt-2 w-full max-w-md"
             >
               {[
-                { id: '01', title: 'Virtual Size Mapping' },
-                { id: '02', title: 'Dynamic Style Generation' },
-                { id: '03', title: 'Predictive Tailoring' },
+                { id: '01', title: 'Lập bản đồ kích thước ảo' },
+                { id: '02', title: 'Tạo phong cách linh hoạt' },
+                { id: '03', title: 'May đo dự đoán' },
               ].map((item) => {
                 const isActive = activeTab === item.id
                 return (
@@ -529,7 +535,7 @@ export default function Home() {
             className="mb-10"
           >
             <h2 className="text-2xl sm:text-4xl font-extrabold uppercase tracking-tight text-gray-800">
-              New Arrivals
+              Hàng mới về
             </h2>
           </motion.div>
 
@@ -546,6 +552,7 @@ export default function Home() {
               >
                 <Link to="/collections" className="block w-full">
                   <div className="relative w-full aspect-[3/4] overflow-hidden rounded-none bg-gray-200 mb-3 shadow-md group-hover:shadow-xl transition-shadow duration-500">
+                    {item.product && <FavoriteButton product={item.product} className="absolute left-2.5 top-2.5 z-20" />}
                     {item.badge && (
                       <span className="absolute top-2.5 right-2.5 z-10 bg-black text-white text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-none shadow-sm">
                         {item.badge}
@@ -580,4 +587,3 @@ export default function Home() {
     </div>
   )
 }
-

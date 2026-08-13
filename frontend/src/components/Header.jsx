@@ -21,7 +21,14 @@ export default function Header() {
   const { isAuthenticated } = useAuth()
 
   const cartItems = useCartStore((state) => state.items)
+  const fetchCart = useCartStore((state) => state.fetchCart)
+  const resetCart = useCartStore((state) => state.resetCart)
   const cartItemCount = cartItems.reduce((acc, item) => acc + item.quantity, 0)
+
+  useEffect(() => {
+    if (isAuthenticated) fetchCart().catch(() => {})
+    else resetCart()
+  }, [isAuthenticated, fetchCart, resetCart])
 
   useEffect(() => {
     const handleScroll = () => {
@@ -43,10 +50,10 @@ export default function Header() {
   }, [lastScrollY])
 
   const navItems = [
-    { name: 'Home', path: '/' },
-    { name: 'Collections', path: '/collections' },
-    { name: 'New Arrivals', path: '/new-arrivals' },
-    { name: 'AI Try-On', path: '/ai-try-on' },
+    { name: 'Trang chủ', path: '/' },
+    { name: 'Bộ sưu tập', path: '/collections' },
+    { name: 'Hàng mới', path: '/new-arrivals' },
+    { name: 'Thử đồ AI', path: '/ai-try-on' },
   ]
 
   const handleSearchSubmit = (e) => {
@@ -124,7 +131,7 @@ export default function Header() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="SEARCH CATALOG"
+              placeholder="TÌM SẢN PHẨM"
               className="pl-6 pr-2 py-1 text-[11px] sm:text-xs font-semibold tracking-widest text-gray-900 placeholder:text-gray-400 uppercase bg-transparent border-b border-gray-300 focus:border-black focus:outline-none w-36 md:w-52 lg:w-64 transition-all duration-200"
             />
           </form>
@@ -133,7 +140,7 @@ export default function Header() {
           <Link
             to="/cart"
             className="relative p-1 text-black hover:text-gray-600 transition shrink-0"
-            aria-label="Shopping Cart"
+            aria-label="Giỏ hàng"
           >
             <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.8]" />
             {cartItemCount > 0 && (
@@ -146,14 +153,14 @@ export default function Header() {
           {/* User Account Icon with Hover Menu OR Unauthenticated Left-to-Right Underline Link */}
           {isAuthenticated ? (
             <div
-              className="relative shrink-0 py-2"
+              className="relative shrink-0 py-2 m-0"
               onMouseEnter={() => setIsUserMenuOpen(true)}
               onMouseLeave={() => setIsUserMenuOpen(false)}
             >
               <Link
                 to="/profile"
                 className="p-1 text-black hover:text-gray-600 transition block cursor-pointer"
-                aria-label="User Profile"
+                aria-label="Hồ sơ người dùng"
               >
                 <User className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.8]" />
               </Link>
@@ -169,7 +176,7 @@ export default function Header() {
               to="/login"
               className="relative group py-1 text-xs sm:text-sm font-semibold tracking-wide text-gray-800 hover:text-black transition shrink-0"
             >
-              <span>Sign in / Register</span>
+              <span>Đăng nhập / Đăng ký</span>
               {/* Left to right sliding underline animation */}
               <span className="absolute bottom-0 left-0 w-full h-[2px] bg-black origin-left scale-x-0 group-hover:scale-x-100 transition-transform duration-300 ease-out rounded-full" />
             </Link>
@@ -179,7 +186,7 @@ export default function Header() {
           <button
             onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             className="md:hidden p-1 text-black hover:text-gray-600 transition cursor-pointer"
-            aria-label="Toggle menu"
+            aria-label="Mở hoặc đóng trình đơn"
           >
             {mobileMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
           </button>
@@ -197,7 +204,7 @@ export default function Header() {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="SEARCH CATALOG"
+              placeholder="TÌM SẢN PHẨM"
               className="w-full pl-8 pr-3 py-2 text-xs font-semibold tracking-widest text-gray-900 placeholder:text-gray-400 uppercase bg-white border border-gray-300 rounded-lg focus:border-black focus:outline-none"
             />
           </form>

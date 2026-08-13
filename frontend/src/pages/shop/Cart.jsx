@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { Sparkles, ArrowRight, Minus, Plus, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import useCartStore from '../../store/cartStore'
+import { formatCurrency } from '../../utils/formatCurrency.js'
 import { AIStylistChatModal } from '../../components/CartModals'
 
 export default function Cart() {
@@ -31,7 +32,7 @@ export default function Cart() {
 
   const handleProceedToCheckout = () => {
     if (items.length === 0) {
-      toast.error('Your bag is currently empty!')
+      toast.error('Giỏ hàng của bạn đang trống!')
       return
     }
     navigate('/checkout')
@@ -39,7 +40,7 @@ export default function Cart() {
 
   return (
     <div className="w-full bg-[#f8f8f8] min-h-screen py-10 font-sans text-gray-900">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-12 gap-8 lg:gap-12 items-start">
+      <div className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 grid lg:grid-cols-12 gap-8 lg:gap-12 items-start">
         
         {/* Left Column: Your Bag List & Shipping Logistics */}
         <div className="lg:col-span-8 space-y-12">
@@ -48,32 +49,32 @@ export default function Cart() {
           <div>
             <div className="flex items-baseline justify-between border-b border-gray-900/80 pb-3">
               <h1 className="text-3xl sm:text-4xl font-black uppercase tracking-tight text-black">
-                YOUR BAG
+                GIỎ HÀNG
               </h1>
               <span className="text-xs font-semibold text-gray-500 tracking-wider uppercase font-mono">
-                [{totalItemCount} {totalItemCount === 1 ? 'ITEM' : 'ITEMS'}]
+                [{totalItemCount} SẢN PHẨM]
               </span>
             </div>
 
             {/* Table Header Labels */}
             <div className="grid grid-cols-12 gap-4 pt-6 pb-2 border-b border-gray-200/80 text-[11px] font-bold text-gray-700 tracking-wider uppercase">
-              <div className="col-span-3 sm:col-span-2">Garment</div>
-              <div className="col-span-4 sm:col-span-5">Details</div>
-              <div className="col-span-3 sm:col-span-3 text-center">Quantity</div>
-              <div className="col-span-2 sm:col-span-2 text-right">Price</div>
+              <div className="col-span-3 sm:col-span-2">Sản phẩm</div>
+              <div className="col-span-4 sm:col-span-5">Chi tiết</div>
+              <div className="col-span-3 sm:col-span-3 text-center">Số lượng</div>
+              <div className="col-span-2 sm:col-span-2 text-right">Giá</div>
             </div>
 
             {/* Garment Items List (Limited to 4 visible items, scrollable when > 4) */}
             {items.length === 0 ? (
               <div className="py-16 text-center space-y-4">
                 <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider">
-                  Your bag is empty.
+                  Giỏ hàng của bạn đang trống.
                 </p>
                 <Link
                   to="/collections"
                   className="inline-block px-6 py-2.5 bg-black text-white text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-gray-800 transition"
                 >
-                  Browse Catalog
+                  Xem sản phẩm
                 </Link>
               </div>
             ) : (
@@ -98,17 +99,18 @@ export default function Cart() {
                         {item.name}
                       </h3>
                       <p className="text-[11px] sm:text-xs text-gray-500 font-medium tracking-wider uppercase space-x-3">
-                        <span>SIZE: <strong className="text-gray-900">{item.size}</strong></span>
-                        <span>COLOR: <strong className="text-gray-900">{item.color}</strong></span>
+                        <span>KÍCH THƯỚC: <strong className="text-gray-900">{item.size}</strong></span>
+                        <span>MÀU: <strong className="text-gray-900">{item.color}</strong></span>
                       </p>
                     </div>
 
                     {/* Quantity Controls */}
                     <div className="col-span-3 sm:col-span-3 flex items-center justify-center space-x-2">
                       <button
-                        onClick={() => updateQuantity(item.id, -1)}
+                        disabled={item.quantity <= 1}
+                        onClick={() => updateQuantity(item.id, item.quantity - 1).catch((error) => toast.error(error.response?.data?.message || 'Không thể cập nhật số lượng'))}
                         className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center border border-gray-300 bg-white text-gray-700 hover:border-black hover:text-black transition cursor-pointer text-xs font-bold"
-                        aria-label="Decrease quantity"
+                        aria-label="Giảm số lượng"
                       >
                         -
                       </button>
@@ -116,16 +118,17 @@ export default function Cart() {
                         {item.quantity}
                       </span>
                       <button
-                        onClick={() => updateQuantity(item.id, 1)}
+                        disabled={item.quantity >= item.stock}
+                        onClick={() => updateQuantity(item.id, item.quantity + 1).catch((error) => toast.error(error.response?.data?.message || 'Không thể cập nhật số lượng'))}
                         className="w-7 h-7 sm:w-8 sm:h-8 flex items-center justify-center border border-gray-300 bg-white text-gray-700 hover:border-black hover:text-black transition cursor-pointer text-xs font-bold"
-                        aria-label="Increase quantity"
+                        aria-label="Tăng số lượng"
                       >
                         +
                       </button>
                       <button
-                        onClick={() => removeItem(item.id)}
+                        onClick={() => removeItem(item.id).catch((error) => toast.error(error.response?.data?.message || 'Không thể xóa sản phẩm'))}
                         className="ml-2 text-gray-400 hover:text-red-600 transition p-1 cursor-pointer"
-                        title="Remove item"
+                        title="Xóa sản phẩm"
                       >
                         <Trash2 className="w-4 h-4" />
                       </button>
@@ -133,7 +136,7 @@ export default function Cart() {
 
                     {/* Price */}
                     <div className="col-span-2 sm:col-span-2 text-right font-bold text-xs sm:text-sm text-black font-mono">
-                      ${(item.price * item.quantity).toFixed(2)}
+                      {formatCurrency(item.price * item.quantity)}
                     </div>
                   </div>
                 ))}
@@ -151,26 +154,26 @@ export default function Cart() {
           {/* Order Synthesis Card */}
           <div className="bg-[#f0f0f0] p-6 sm:p-8 rounded-xs border border-gray-200/80 shadow-2xs space-y-6">
             <h2 className="text-lg font-black uppercase tracking-tight text-black">
-              ORDER SYNTHESIS
+              TÓM TẮT ĐƠN HÀNG
             </h2>
 
             <div className="space-y-3 text-xs text-gray-700 font-medium">
               <div className="flex justify-between items-center">
-                <span className="uppercase tracking-wider">SUBTOTAL</span>
-                <span className="font-bold text-black font-mono">${subtotal.toFixed(2)}</span>
+                <span className="uppercase tracking-wider">TẠM TÍNH</span>
+                <span className="font-bold text-black font-mono">{formatCurrency(subtotal)}</span>
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="uppercase tracking-wider">PRIORITY SHIPPING</span>
+                <span className="uppercase tracking-wider">PHÍ GIAO HÀNG</span>
                 <span className="font-bold text-black font-mono">
-                  {subtotal > 0 ? `$${shippingCost.toFixed(2)}` : '$0.00'}
+                  {formatCurrency(subtotal > 0 ? shippingCost : 0)}
                 </span>
               </div>
 
               <div className="flex justify-between items-center">
-                <span className="uppercase tracking-wider">AI FIT INSURANCE</span>
+                <span className="uppercase tracking-wider">BẢO HIỂM THỬ ĐỒ AI</span>
                 <span className="font-bold text-[#d97706] font-mono">
-                  ${aiInsuranceCost.toFixed(2)}
+                  {formatCurrency(aiInsuranceCost)}
                 </span>
               </div>
 
@@ -178,10 +181,10 @@ export default function Cart() {
 
               <div className="flex justify-between items-baseline pt-1">
                 <span className="font-black text-xl text-black uppercase tracking-tight">
-                  TOTAL
+                  TỔNG CỘNG
                 </span>
                 <span className="font-black text-2xl text-black font-mono">
-                  ${total.toFixed(2)}
+                  {formatCurrency(total)}
                 </span>
               </div>
             </div>
@@ -191,11 +194,11 @@ export default function Cart() {
               <div className="flex items-center gap-2 text-[#d97706]">
                 <Sparkles className="w-4 h-4 shrink-0" />
                 <span className="font-bold text-[10px] uppercase tracking-wider">
-                  AI SMART RECOMMENDATION
+                  GỢI Ý THÔNG MINH TỪ AI
                 </span>
               </div>
               <p className="text-[11px] text-gray-600 leading-relaxed font-medium">
-                Based on your virtual try-on, we've adjusted the Blazer size to 'L' for the perfect oversized silhouette.
+                Dựa trên kết quả thử đồ trực tuyến, AI gợi ý áo blazer cỡ L để có phom rộng vừa vặn nhất.
               </p>
             </div>
 
@@ -205,12 +208,12 @@ export default function Cart() {
                 onClick={handleProceedToCheckout}
                 className="w-full py-4 bg-black text-white font-black text-xs uppercase tracking-widest hover:bg-gray-800 transition cursor-pointer shadow-md active:scale-[0.99] flex items-center justify-center gap-2"
               >
-                <span>PROCEED TO CHECKOUT</span>
+                <span>TIẾN HÀNH THANH TOÁN</span>
                 <ArrowRight className="w-4 h-4" />
               </button>
 
               <p className="text-[9px] text-center text-gray-500 font-semibold tracking-wider uppercase font-mono">
-                SECURE PAYMENT PROCESSED VIA AESTHETIX CORE
+                THANH TOÁN BẢO MẬT QUA HỆ THỐNG AESTHETIX
               </p>
             </div>
           </div>
@@ -222,10 +225,10 @@ export default function Cart() {
           >
             <div>
               <h3 className="font-extrabold text-xs text-black uppercase tracking-wider">
-                NEED ASSISTANCE?
+                BẠN CẦN HỖ TRỢ?
               </h3>
               <p className="text-[11px] text-gray-500 font-medium mt-0.5">
-                Our AI Stylists are online 24/7
+                Trợ lý thời trang AI luôn trực tuyến 24/7
               </p>
             </div>
             <ArrowRight className="w-5 h-5 text-gray-800 group-hover:translate-x-1 transition" />

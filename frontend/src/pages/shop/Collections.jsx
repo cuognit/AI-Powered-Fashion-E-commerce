@@ -6,8 +6,6 @@ import {
   SlidersHorizontal, 
   Search, 
   Eye, 
-  ShoppingBag, 
-  X, 
   ChevronLeft, 
   ChevronRight, 
   Sparkles,
@@ -22,6 +20,8 @@ import {
   CheckCircle2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import ProductQuickView from '../../components/ProductQuickView.jsx';
+import FavoriteButton from '../../components/FavoriteButton.jsx';
 
 // Embedded ProductCard component with the exact requested layout
 function ProductCard({ product, onClick }) {
@@ -36,6 +36,7 @@ function ProductCard({ product, onClick }) {
       className={`group cursor-pointer ${!inStock ? 'opacity-80' : ''}`}
     >
       <div className={`relative overflow-hidden aspect-[3/4] bg-surface-container-low ${!inStock ? 'grayscale' : ''}`}>
+        <FavoriteButton product={product} className='absolute right-3 top-3 z-20' />
         <img 
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" 
           alt={product.name}
@@ -340,19 +341,19 @@ export default function Collections() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
-      <main className="max-w-[var(--spacing-container-max)] mx-auto px-margin-desktop flex gap-gutter w-full flex-1 py-10">
+    <div className="h-full overflow-hidden bg-background">
+      <main className="max-w-[var(--spacing-container-max)] mx-auto px-4 sm:px-6 lg:px-8 flex h-full gap-gutter w-full overflow-hidden">
         
         {/* Dynamic Sidebar with exact layout and styles */}
-        <aside className="hidden lg:flex flex-col gap-stack-md py-4 pr-gutter h-[calc(100vh-80px)] w-64 left-0 sticky overflow-y-auto custom-scrollbar shrink-0">
+        <aside className="custom-scrollbar hidden h-full w-64 shrink-0 flex-col gap-stack-md overflow-y-auto overscroll-contain py-6 pr-gutter lg:flex">
           <div className="mb-4 flex items-center justify-between">
             <div>
-              <h2 className="font-headline-md text-headline-md text-primary dark:text-primary-fixed">Filters</h2>
-              <p className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">Refine your selection</p>
+              <h2 className="font-headline-md text-headline-md text-primary dark:text-primary-fixed">Bộ lọc</h2>
+              <p className="font-label-caps text-[10px] text-on-surface-variant tracking-wider uppercase">Tinh chỉnh lựa chọn</p>
             </div>
             <button 
               onClick={handleResetFilters}
-              title="Reset all filters"
+              title="Đặt lại tất cả bộ lọc"
               className="p-1.5 hover:bg-surface-container-high rounded transition-colors text-outline hover:text-primary"
             >
               <RotateCcw className="w-3.5 h-3.5" />
@@ -363,12 +364,12 @@ export default function Collections() {
           <div className="flex flex-col gap-2">
             <div className="flex items-center gap-2 text-on-surface-variant pl-4 py-1">
               <Search className="w-[16px] h-[16px]" />
-              <span className="font-label-caps text-[11px] uppercase tracking-wider">Search Keyword</span>
+              <span className="font-label-caps text-[11px] uppercase tracking-wider">Từ khóa tìm kiếm</span>
             </div>
             <div className="pl-8 relative">
               <input 
                 type="text"
-                placeholder="Search..."
+                placeholder="Tìm kiếm..."
                 value={searchTerm}
                 onChange={(e) => handleSearchChange(e.target.value)}
                 className="w-full bg-surface-container-low border border-outline-variant focus:border-primary focus:outline-none text-xs px-3 py-1.5 rounded transition-all"
@@ -391,7 +392,7 @@ export default function Collections() {
                   type="checkbox"
                 />
                 <span className={`font-technical-mono text-[13px] group-hover:text-primary transition-colors ${selectedCategories.includes('Tops') ? 'text-primary font-bold' : 'text-on-surface-variant'}`}>
-                  Tops
+                    Áo
                 </span>
               </label>
               <label className="flex items-center gap-2 cursor-pointer group mt-1">
@@ -402,7 +403,7 @@ export default function Collections() {
                   type="checkbox"
                 />
                 <span className={`font-technical-mono text-[13px] group-hover:text-primary transition-colors ${selectedCategories.includes('Bottoms') ? 'text-primary font-bold' : 'text-on-surface-variant'}`}>
-                  Bottoms
+                    Quần
                 </span>
               </label>
             </div>
@@ -412,7 +413,7 @@ export default function Collections() {
           <div className="flex flex-col gap-2 mt-4">
             <div className="flex items-center gap-2 text-on-surface-variant pl-4 hover:bg-surface-container-high transition-colors cursor-pointer py-1">
               <Tag className="w-[18px] h-[18px]" />
-              <span className="font-label-caps text-label-caps">Brands</span>
+              <span className="font-label-caps text-label-caps">Thương hiệu</span>
             </div>
             <div className="pl-8 flex flex-col gap-2 mt-2">
               {brands.map(brand => (
@@ -424,7 +425,7 @@ export default function Collections() {
                     type="checkbox"
                   />
                   <span className={`font-technical-mono text-[13px] group-hover:text-primary transition-colors ${selectedBrands.includes(brand) ? 'text-primary font-bold' : 'text-on-surface-variant'}`}>
-                    {brand === 'All' ? 'All Brands' : brand}
+                    {brand === 'All' ? 'Tất cả thương hiệu' : brand}
                   </span>
                 </label>
               ))}
@@ -435,7 +436,7 @@ export default function Collections() {
           <div className="flex flex-col gap-2 mt-4">
             <div className="flex items-center gap-2 text-on-surface-variant pl-4 hover:bg-surface-container-high transition-colors cursor-pointer py-1">
               <Ruler className="w-[18px] h-[18px]" />
-              <span className="font-label-caps text-label-caps">Sizes</span>
+              <span className="font-label-caps text-label-caps">Kích thước</span>
             </div>
             <div className="pl-8 flex flex-wrap gap-2 mt-2">
               {['S', 'M', 'L', 'XL'].map(size => {
@@ -461,7 +462,7 @@ export default function Collections() {
           <div className="flex flex-col gap-2 mt-4">
             <div className="flex items-center gap-2 text-on-surface-variant pl-4 hover:bg-surface-container-high transition-colors cursor-pointer py-1">
               <Palette className="w-[18px] h-[18px]" />
-              <span className="font-label-caps text-label-caps">Colors</span>
+              <span className="font-label-caps text-label-caps">Màu sắc</span>
             </div>
             <div className="pl-8 flex flex-wrap gap-3 mt-2">
               {[
@@ -497,7 +498,7 @@ export default function Collections() {
           <div className="flex flex-col gap-2 mt-4">
             <div className="flex items-center gap-2 text-on-surface-variant pl-4 hover:bg-surface-container-high transition-colors cursor-pointer py-1">
               <Banknote className="w-[18px] h-[18px]" />
-              <span className="font-label-caps text-label-caps">Price Limit</span>
+              <span className="font-label-caps text-label-caps">Giới hạn giá</span>
             </div>
             <div className="pl-8 pt-4">
               <input 
@@ -523,18 +524,18 @@ export default function Collections() {
             onClick={handleApplyFilters}
             className="mt-stack-md bg-primary text-white py-3 font-label-caps text-label-caps tracking-[0.2em] hover:opacity-90 transition-all rounded-sm active:scale-[0.98] cursor-pointer"
           >
-            Apply Filters
+            Áp dụng bộ lọc
           </button>
         </aside>
         
         {/* Catalog Section */}
-        <section className="flex-1 py-6 md:py-10 min-w-0">
+        <section className="custom-scrollbar min-w-0 flex-1 overflow-y-auto overscroll-contain py-6 pr-2 md:py-10">
           {/* Top Smart Semantic Search Bar */}
           <div className="mb-8 p-5 bg-gradient-to-r from-gray-50 via-white to-gray-50 border border-gray-200/80 rounded-2xl shadow-xs">
             <div className="flex items-center gap-2 mb-3">
               <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-purple-100 text-purple-800 border border-purple-200">
                 <Sparkles className="w-3.5 h-3.5 text-purple-600 animate-pulse" />
-                AI Smart Semantic Search
+                Tìm kiếm ngữ nghĩa thông minh bằng AI
               </span>
               <span className="text-xs text-gray-500 hidden sm:inline">
                 • Tìm kiếm bằng ngôn ngữ tự nhiên, cảm xúc, phong cách thời trang
@@ -550,7 +551,7 @@ export default function Collections() {
           <header className="mb-8 flex flex-col md:flex-row md:items-end justify-between gap-4">
             <div>
               <div className="flex items-center gap-2">
-                <span className="font-technical-mono text-[12px] text-outline uppercase tracking-[0.3em]">Browsing Catalog</span>
+                <span className="font-technical-mono text-[12px] text-outline uppercase tracking-[0.3em]">Đang xem danh mục</span>
                 {searchMode === 'semantic' && (
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-purple-50 text-purple-700 border border-purple-200">
                     <Sparkles className="w-3 h-3 text-purple-500" />
@@ -566,7 +567,7 @@ export default function Collections() {
               </div>
 
               <h1 className="font-headline-xl text-headline-xl text-primary mt-2">
-                {searchTerm ? `Kết quả tìm kiếm cho "${searchTerm}"` : "Curated Collections"}
+                {searchTerm ? `Kết quả tìm kiếm cho "${searchTerm}"` : "Bộ sưu tập tuyển chọn"}
               </h1>
               <p className="text-on-surface-variant mt-1 font-body-md text-sm">
                 Tìm thấy {filteredProducts.length} sản phẩm phù hợp phong cách của bạn.
@@ -575,7 +576,7 @@ export default function Collections() {
             
             {/* Sorting */}
             <div className="flex items-center gap-4 shrink-0">
-              <span className="font-label-caps text-label-caps text-on-surface-variant whitespace-nowrap">Sort by:</span>
+              <span className="font-label-caps text-label-caps text-on-surface-variant whitespace-nowrap">Sắp xếp:</span>
               <select 
                 value={sortBy}
                 onChange={(e) => {
@@ -584,10 +585,10 @@ export default function Collections() {
                 }}
                 className="border-none bg-transparent font-label-caps text-label-caps focus:ring-0 cursor-pointer py-0 outline-none pr-8 relative"
               >
-                <option>Featured</option>
-                <option>Price: Low to High</option>
-                <option>Price: High to Low</option>
-                <option>Newest</option>
+                <option value="Featured">Nổi bật</option>
+                <option value="Price: Low to High">Giá: Thấp đến cao</option>
+                <option value="Price: High to Low">Giá: Cao đến thấp</option>
+                <option value="Newest">Mới nhất</option>
               </select>
             </div>
           </header>
@@ -722,119 +723,7 @@ export default function Collections() {
         </section>
       </main>
 
-      {/* Quick View / Detail Modal */}
-      {selectedProduct && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-sm animate-fade-in">
-          <div className="relative bg-white rounded-3xl max-w-4xl w-full shadow-2xl overflow-hidden border border-slate-100 flex flex-col md:flex-row max-h-[90vh]">
-            
-            {/* Close Button */}
-            <button 
-              onClick={() => setSelectedProduct(null)}
-              className="absolute top-4 right-4 z-10 p-2 bg-white/80 hover:bg-slate-100 rounded-full border border-slate-200 text-slate-800 transition-colors cursor-pointer"
-            >
-              <X className="h-5 w-5" />
-            </button>
-
-            {/* Left Column: Image */}
-            <div className="md:w-1/2 bg-slate-50 flex items-center justify-center p-4 min-h-[300px]">
-              <img 
-                src={selectedProduct.images[0] || "https://images.unsplash.com/photo-1515886657613-9f3515b0c78f?w=600"} 
-                alt={selectedProduct.name}
-                className="max-h-[400px] w-full object-cover rounded-2xl shadow-sm"
-              />
-            </div>
-
-            {/* Right Column: Information */}
-            <div className="md:w-1/2 p-6 md:p-8 flex flex-col overflow-y-auto max-h-[50vh] md:max-h-[90vh]">
-              <div className="flex items-center gap-2 mb-2">
-                <span className="text-[10px] font-bold text-amber-500 uppercase tracking-widest bg-amber-50 px-2 py-0.5 rounded">
-                  {selectedProduct.brand}
-                </span>
-                <span className="text-slate-400 text-xs">• ID: {selectedProduct._id}</span>
-              </div>
-
-              <h2 className="text-xl md:text-2xl font-bold text-slate-950 mb-3 leading-snug">
-                {selectedProduct.name}
-              </h2>
-
-              {/* Price section */}
-              <div className="flex items-baseline gap-3 mb-6 bg-slate-50 p-3.5 rounded-2xl">
-                {selectedProduct.sale_price ? (
-                  <>
-                    <span className="text-2xl font-extrabold text-red-500">
-                      {selectedProduct.sale_price.toLocaleString('vi-VN')} đ
-                    </span>
-                    <span className="text-sm text-slate-400 line-through">
-                      {selectedProduct.base_price.toLocaleString('vi-VN')} đ
-                    </span>
-                  </>
-                ) : (
-                  <span className="text-2xl font-extrabold text-slate-950">
-                    {selectedProduct.base_price.toLocaleString('vi-VN')} đ
-                  </span>
-                )}
-              </div>
-
-              {/* Description */}
-              <div className="mb-6">
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Mô tả sản phẩm</h4>
-                <p className="text-slate-600 text-sm leading-relaxed">
-                  {selectedProduct.description || "Sản phẩm thời trang cao cấp được thiết kế theo xu hướng mới nhất, sử dụng chất liệu an toàn, thoáng mát, mang lại sự tự tin và thoải mái tối đa cho người mặc."}
-                </p>
-              </div>
-
-              {/* Variants (Colors, Sizes, Stock) */}
-              <div className="mb-6">
-                <h4 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Phiên bản có sẵn</h4>
-                <div className="space-y-2">
-                  {selectedProduct.variants && selectedProduct.variants.length > 0 ? (
-                    selectedProduct.variants.map((v, idx) => (
-                      <div key={idx} className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 border border-slate-100 hover:border-slate-200 transition-colors text-xs">
-                        <div className="flex items-center gap-3">
-                          <span className="font-semibold text-slate-700 bg-slate-200 px-2 py-0.5 rounded">SKU: {v.sku}</span>
-                          <span className="text-slate-500">Màu: <strong>{v.color}</strong></span>
-                          <span className="text-slate-500">Size: <strong>{v.size}</strong></span>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                          {v.stock > 0 ? (
-                            <>
-                              <span className="inline-block h-2 w-2 bg-green-500 rounded-full"></span>
-                              <span className="font-medium text-green-700">Còn {v.stock} sản phẩm</span>
-                            </>
-                          ) : (
-                            <>
-                              <span className="inline-block h-2 w-2 bg-red-500 rounded-full"></span>
-                              <span className="font-medium text-red-600">Hết hàng</span>
-                            </>
-                          )}
-                        </div>
-                      </div>
-                    ))
-                  ) : (
-                    <p className="text-slate-400 text-xs italic">Không có thông tin phiên bản</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Actions */}
-              <div className="flex gap-3 mt-auto">
-                <button
-                  disabled={selectedProduct.status === 'out_of_stock'}
-                  onClick={() => {
-                    toast.success("Đã thêm vào giỏ hàng mẫu!");
-                    setSelectedProduct(null);
-                  }}
-                  className="flex-1 flex items-center justify-center gap-2 py-3 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300 text-white rounded-xl font-semibold text-sm transition-colors cursor-pointer"
-                >
-                  <ShoppingBag className="h-4 w-4" />
-                  Thêm vào giỏ hàng
-                </button>
-              </div>
-            </div>
-
-          </div>
-        </div>
-      )}
+      <ProductQuickView product={selectedProduct} onClose={() => setSelectedProduct(null)} />
     </div>
   );
 }

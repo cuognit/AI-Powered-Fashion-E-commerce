@@ -7,10 +7,10 @@ export default function Footer() {
   const [activeModal, setActiveModal] = useState(null) // 'lang' | 'security' | 'ar' | null
 
   const footerLinks = [
-    { name: 'Privacy Policy', path: '/privacy' },
-    { name: 'Terms of Service', path: '/terms' },
-    { name: 'Shipping Info', path: '/shipping' },
-    { name: 'Contact Us', path: '/contact' },
+    { name: 'Chính sách quyền riêng tư', path: '/privacy' },
+    { name: 'Điều khoản dịch vụ', path: '/terms' },
+    { name: 'Thông tin giao hàng', path: '/shipping' },
+    { name: 'Liên hệ', path: '/contact' },
   ]
 
   return (
@@ -45,7 +45,7 @@ export default function Footer() {
 
         {/* Copyright Text */}
         <p className="text-[11px] sm:text-xs text-gray-500 font-medium tracking-wider uppercase text-center mb-6">
-          © 2024 AESTHETIX AI FASHION. ALL RIGHTS RESERVED.
+          © 2024 AESTHETIX. BẢO LƯU MỌI QUYỀN.
         </p>
 
         {/* Bottom Centered Interactive Icons Trio */}
@@ -53,8 +53,8 @@ export default function Footer() {
           <button
             onClick={() => setActiveModal('lang')}
             className="p-1 text-gray-800 hover:text-black transition transform hover:scale-110 cursor-pointer"
-            title="Language & Region Selector"
-            aria-label="Language & Region Selector"
+            title="Chọn ngôn ngữ và khu vực"
+            aria-label="Chọn ngôn ngữ và khu vực"
           >
             <Globe className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.8]" />
           </button>
@@ -62,8 +62,8 @@ export default function Footer() {
           <button
             onClick={() => setActiveModal('security')}
             className="p-1 text-gray-800 hover:text-black transition transform hover:scale-110 cursor-pointer"
-            title="AI Security & Biometric Protection"
-            aria-label="AI Security & Biometric Protection"
+            title="Bảo mật AI và sinh trắc học"
+            aria-label="Bảo mật AI và sinh trắc học"
           >
             <Fingerprint className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.8]" />
           </button>
@@ -71,8 +71,8 @@ export default function Footer() {
           <button
             onClick={() => setActiveModal('ar')}
             className="p-1 text-gray-800 hover:text-black transition transform hover:scale-110 cursor-pointer"
-            title="3D & AR Fitting Engine"
-            aria-label="3D & AR Fitting Engine"
+            title="Công nghệ thử đồ 3D và AR"
+            aria-label="Công nghệ thử đồ 3D và AR"
           >
             <Box className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.8]" />
           </button>

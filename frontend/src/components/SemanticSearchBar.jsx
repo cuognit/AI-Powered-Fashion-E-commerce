@@ -121,7 +121,7 @@ export default function SemanticSearchBar({
           {/* AI Semantic Badge */}
           <div className="hidden sm:flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-violet-600/10 via-purple-600/10 to-indigo-600/10 border border-purple-200/60 text-purple-700 text-xs font-medium tracking-wide shadow-2xs select-none">
             <Sparkles className="w-3.5 h-3.5 text-purple-600 animate-pulse" />
-            <span>AI Search</span>
+            <span>Tìm kiếm AI</span>
           </div>
 
           {/* Submit Button */}

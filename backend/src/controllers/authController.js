@@ -60,3 +60,37 @@ export async function logout(request, response, next) {
     next(error)
   }
 }
+
+export async function getMe(request, response, next) {
+  try {
+    response.json(await authService.getUserProfile(request.user.sub))
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function updateProfile(request, response, next) {
+  try {
+    response.json(await authService.updateUserProfile(request.user.sub, request.body))
+  } catch (error) {
+    next(error)
+  }
+}
+
+export async function changePassword(request, response, next) {
+  try {
+    const { user, accessToken, refreshToken, message, passwordChange } = await authService.changeUserPassword(request.user.sub, request.body)
+
+    response.cookie('refreshToken', refreshToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
+      maxAge: 7 * 24 * 60 * 60 * 1000,
+      path: '/api/auth',
+    })
+
+    response.json({ message, user, accessToken, passwordChange })
+  } catch (error) {
+    next(error)
+  }
+}

@@ -1,29 +1,30 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronRight, Heart, History, LogOut, ShieldCheck, ShoppingBag, Truck, User } from 'lucide-react'
+import { ChevronRight, Heart, History, LogOut, ShieldCheck, ShoppingBag, User } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import useAuth from '../hooks/useAuth.js'
 import useCartStore from '../store/cartStore.js'
+import useWishlistStore from '../store/wishlistStore.js'
 
 export default function UserDropdown({ isOpen, onClose }) {
   const { user, logout } = useAuth()
   const items = useCartStore((state) => state.items)
   const cartItemCount = items.reduce((sum, item) => sum + item.quantity, 0)
+  const wishlistCount = useWishlistStore((state) => state.items.length)
   const isAdmin = user?.role === 'admin'
 
   const handleLogout = async () => {
     await logout()
-    toast.success('Signed out successfully')
+    toast.success('Đăng xuất thành công')
     onClose?.()
   }
 
   const menuItems = [
-    ...(isAdmin ? [{ label: 'Admin dashboard', path: '/admin', icon: ShieldCheck, badge: 'ADMIN' }] : []),
-    { label: 'My profile', path: '/profile', icon: User },
-    { label: 'Order history', path: '/orders', icon: History },
-    { label: 'Wishlist', path: '/wishlist', icon: Heart },
-    { label: 'Shopping bag', path: '/cart', icon: ShoppingBag, countBadge: cartItemCount || null },
-    { label: 'Track an order', path: '/track-order', icon: Truck },
+    ...(isAdmin ? [{ label: 'Trang quản trị', path: '/admin', icon: ShieldCheck, badge: 'QUẢN TRỊ' }] : []),
+    { label: 'Hồ sơ của tôi', path: '/profile', icon: User },
+    { label: 'Đơn hàng của tôi', path: '/orders', icon: History },
+    { label: 'Sản phẩm yêu thích', path: '/wishlist', icon: Heart, countBadge: wishlistCount || null },
+    { label: 'Giỏ hàng', path: '/cart', icon: ShoppingBag, countBadge: cartItemCount || null },
   ]
 
   return (
@@ -43,7 +44,7 @@ export default function UserDropdown({ isOpen, onClose }) {
           <div className="border-b border-gray-100 bg-gray-50/80 p-4 rounded-t-2xl">
             <div className="flex items-center justify-between gap-2">
               <p className="truncate text-xs font-bold uppercase tracking-wider text-black">
-                {user?.name || (isAdmin ? 'Administrator' : 'AESTHETIX member')}
+                {user?.name || (isAdmin ? 'Quản trị viên' : 'Thành viên AESTHETIX')}
               </p>
               {isAdmin && <span className="rounded-md bg-black px-2 py-0.5 font-mono text-[9px] font-bold tracking-wider text-white">ADMIN</span>}
             </div>
@@ -71,7 +72,7 @@ export default function UserDropdown({ isOpen, onClose }) {
             <div className="my-1 border-t border-gray-100" />
             <button type="button" onClick={handleLogout} className="group flex w-full cursor-pointer items-center gap-2.5 rounded-xl px-3 py-2.5 text-xs font-semibold text-red-600 transition hover:bg-red-50">
               <LogOut className="h-4 w-4 shrink-0 text-red-500 transition group-hover:scale-110" />
-              Sign out
+              Đăng xuất
             </button>
           </div>
         </motion.div>

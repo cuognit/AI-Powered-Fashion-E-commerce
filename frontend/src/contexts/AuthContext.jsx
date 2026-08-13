@@ -25,7 +25,7 @@ function AuthLoadingScreen() {
     <div className="flex min-h-screen items-center justify-center bg-[#f2f0eb]" role="status" aria-live="polite">
       <div className="flex flex-col items-center gap-4">
         <span className="h-8 w-8 animate-spin rounded-full border-2 border-neutral-300 border-t-black" />
-        <span className="text-[10px] font-bold uppercase tracking-[0.24em] text-neutral-500">Restoring session</span>
+        <span className="text-[10px] font-bold uppercase tracking-[0.24em] text-neutral-500">Đang khôi phục phiên đăng nhập</span>
       </div>
     </div>
   )
@@ -52,6 +52,10 @@ export function AuthProvider({ children }) {
   const establishSession = useCallback((userData, token) => {
     applyAccessToken(token, userData)
   }, [applyAccessToken])
+
+  const updateUser = useCallback((patch) => {
+    setUser((currentUser) => (currentUser ? { ...currentUser, ...patch } : currentUser))
+  }, [])
 
   const logout = useCallback(async () => {
     try {
@@ -94,9 +98,10 @@ export function AuthProvider({ children }) {
     isAuthenticated: Boolean(accessToken),
     isInitializing,
     establishSession,
+    updateUser,
     clearSession,
     logout,
-  }), [accessToken, user, isInitializing, establishSession, clearSession, logout])
+  }), [accessToken, user, isInitializing, establishSession, updateUser, clearSession, logout])
 
   return (
     <AuthContext.Provider value={value}>

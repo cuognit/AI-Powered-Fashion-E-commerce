@@ -8,13 +8,14 @@ export const getProducts = async (req, res) => {
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 10;
     const skip = (page - 1) * limit;
+    const sort = req.query.sort === 'newest' ? { createdAt: -1, _id: -1 } : {};
 
     const query = { is_deleted: false, status: 'available' };
     
     if (req.query.category) query.category_id = req.query.category;
     if (req.query.brand) query.brand = req.query.brand;
 
-    const products = await Product.find(query).skip(skip).limit(limit);
+    const products = await Product.find(query).sort(sort).skip(skip).limit(limit);
     const total = await Product.countDocuments(query);
 
     res.status(200).json({
