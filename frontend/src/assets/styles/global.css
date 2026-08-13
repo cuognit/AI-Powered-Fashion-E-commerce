@@ -132,7 +132,7 @@ body {
 
 .auth-dark-form svg {
   color: rgb(115 115 115);
-}
+
 
 @keyframes admin-drawer-backdrop-in {
   from { opacity: 0; }

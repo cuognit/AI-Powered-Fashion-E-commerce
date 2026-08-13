@@ -1,15 +1,9 @@
-import axios from 'axios';
+﻿import axiosClient from './axiosClient.js'
 
-const BASE_URL = 'http://localhost:3001/api';
+export const getReviewsByProduct = (productId) => axiosClient.get(`/reviews/${productId}`)
+export const getReviewEligibility = (productId) => axiosClient.get(`/reviews/${productId}/eligibility`)
+export const addReview = (reviewData) => axiosClient.post('/reviews', reviewData)
+export const updateReview = (reviewId, reviewData) => axiosClient.patch(`/reviews/${reviewId}`, reviewData)
+export const deleteReview = (reviewId) => axiosClient.delete(`/reviews/${reviewId}`)
 
-const reviewApi = {
-    getReviewsByProduct: (productId) => {
-        return axios.get(`${BASE_URL}/reviews/${productId}`);
-    },
-
-    addReview: (reviewData) => {
-        return axios.post(`${BASE_URL}/reviews`, reviewData);
-    }
-};
-
-export default reviewApi;
+export default { getReviewsByProduct, getReviewEligibility, addReview, updateReview, deleteReview }
