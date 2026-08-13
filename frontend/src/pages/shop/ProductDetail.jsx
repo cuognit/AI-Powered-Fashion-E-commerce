@@ -103,7 +103,7 @@ export default function ProductDetail() {
     setSelected(next)
     setQuantity(1)
     const match = product.variants.find((item) => item.option_values?.every((option) => next[String(option.attribute_id)] === String(option.value_id)))
-    setSelectedSku(match?.stock > 0 ? match.sku : '')
+    setSelectedSku(match ? match.sku : '')
     setImageIndex(0)
   }
 
@@ -111,6 +111,7 @@ export default function ProductDetail() {
 
   const add = async () => {
     if (!variant) return toast.error('Vui lòng chọn đầy đủ thuộc tính sản phẩm')
+    if (variant.stock < 1) return toast.error('Sản phẩm hiện đang hết hàng')
     if (quantity > variant.stock) return toast.error('Số lượng không hợp lệ')
     try {
       await addItem(product._id, variant.sku, quantity)
@@ -150,10 +151,49 @@ export default function ProductDetail() {
               <h1 className='text-4xl font-black uppercase leading-tight'>{product.name}</h1>
               <FavoriteButton product={product} />
             </div>
-            <div className='mt-4 flex items-center gap-3 text-2xl font-bold'>
-              <span>{price.toLocaleString('vi-VN')} đ</span>
-              {variant?.sale_price != null && variant?.base_price != null && <span className='text-base text-zinc-400 line-through'>{variant.base_price.toLocaleString('vi-VN')} đ</span>}
+            <div className='mt-4 flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 pb-4'>
+              <div className='flex items-center gap-3 text-2xl font-bold'>
+                <span>{price.toLocaleString('vi-VN')} đ</span>
+                {variant?.sale_price != null && variant?.base_price != null && <span className='text-base text-zinc-400 line-through'>{variant.base_price.toLocaleString('vi-VN')} đ</span>}
+              </div>
+
+              {/* Tồn kho tương ứng với biến thể đã chọn */}
+              {variant ? (
+                variant.stock > 5 ? (
+                  <span className='inline-flex items-center gap-1.5 rounded-full border border-emerald-200 bg-emerald-50 px-3.5 py-1 text-xs font-bold text-emerald-700 shadow-sm'>
+                    <span className='h-2 w-2 rounded-full bg-emerald-500 animate-pulse' />
+                    Tồn kho: {variant.stock} sản phẩm
+                  </span>
+                ) : variant.stock > 0 ? (
+                  <span className='inline-flex items-center gap-1.5 rounded-full border border-amber-200 bg-amber-50 px-3.5 py-1 text-xs font-bold text-amber-700 shadow-sm'>
+                    <span className='h-2 w-2 rounded-full bg-amber-500 animate-pulse' />
+                    Chỉ còn {variant.stock} sản phẩm!
+                  </span>
+                ) : (
+                  <span className='inline-flex items-center gap-1.5 rounded-full border border-red-200 bg-red-50 px-3.5 py-1 text-xs font-bold text-red-700 shadow-sm'>
+                    <span className='h-2 w-2 rounded-full bg-red-500' />
+                    Hết hàng
+                  </span>
+                )
+              ) : (
+                <span className='inline-flex items-center gap-1.5 rounded-full border border-zinc-200 bg-zinc-100 px-3.5 py-1 text-xs font-medium text-zinc-600'>
+                  Vui lòng chọn màu & kích thước
+                </span>
+              )}
             </div>
+
+            {/* Mã SKU & Tình trạng tồn kho */}
+            {variant && (
+              <div className='mt-3 flex flex-wrap items-center justify-between text-xs text-zinc-500 font-medium'>
+                <span>Mã SKU: <strong className='font-mono font-bold text-zinc-800'>{variant.sku}</strong></span>
+                <span>
+                  Tình trạng tồn kho:{' '}
+                  <strong className={variant.stock > 0 ? 'font-bold text-emerald-700' : 'font-bold text-red-600'}>
+                    {variant.stock > 0 ? `Sẵn hàng (${variant.stock} cái)` : 'Tạm hết hàng'}
+                  </strong>
+                </span>
+              </div>
+            )}
           </div>
           {product.description && <p className='leading-7 text-zinc-600'>{product.description}</p>}
           {product.option_axes?.length ? (
@@ -165,22 +205,24 @@ export default function ProductDetail() {
                   <div key={attributeId}>
                     <div className='mb-2 flex justify-between text-xs font-bold uppercase'>
                       <span>{axis.attribute_name}</span>
-                      <span>{options.find((option) => String(option.attribute_id) === attributeId && String(option.value_id) === selected[attributeId])?.value_name || 'Bắt buộc'}</span>
+                      <span className='text-zinc-600'>{options.find((option) => String(option.attribute_id) === attributeId && String(option.value_id) === selected[attributeId])?.value_name || 'Bắt buộc'}</span>
                     </div>
                     <div className='flex flex-wrap gap-2'>
                       {axis.value_ids.map((rawId) => {
                         const valueId = String(rawId)
                         const option = options.find((item) => String(item.attribute_id) === attributeId && String(item.value_id) === valueId)
                         const isSelected = selected[attributeId] === valueId
+                        const isAvailable = available(attributeId, valueId)
                         return (
                           <button
                             type='button'
                             key={valueId}
-                            disabled={!available(attributeId, valueId)}
+                            disabled={!isAvailable}
                             onClick={() => choose(attributeId, valueId)}
-                            className={`flex items-center gap-2 border px-4 py-3 text-sm transition-all duration-200 active:scale-95 ${isSelected ? 'border-black bg-black text-white shadow' : 'border-zinc-200 bg-white hover:border-black hover:bg-zinc-50'} disabled:opacity-30`}
+                            className={`flex items-center gap-2 border px-4 py-3 text-sm transition-all duration-200 active:scale-95 ${isSelected ? 'border-black bg-black text-white shadow' : 'border-zinc-200 bg-white hover:border-black hover:bg-zinc-50 text-zinc-900'} disabled:opacity-30 disabled:cursor-not-allowed`}
+                            title={!isAvailable ? 'Hết hàng cho lựa chọn này' : undefined}
                           >
-                            {option?.color_hex && <span className='h-4 w-4 rounded-full border' style={{ backgroundColor: option.color_hex }} />}
+                            {option?.color_hex && <span className='h-4 w-4 rounded-full border shadow-inner' style={{ backgroundColor: option.color_hex }} />}
                             {option?.value_name}
                           </button>
                         )
@@ -200,27 +242,42 @@ export default function ProductDetail() {
                   onClick={() => { setSelectedSku(item.sku); setQuantity(1) }}
                   className={`border p-3 text-left transition-all duration-200 active:scale-95 ${selectedSku === item.sku ? 'border-black bg-black text-white shadow' : 'border-zinc-200 bg-white hover:border-black hover:bg-zinc-50'} disabled:opacity-30`}
                 >
-                  {item.color} / {item.size} · {item.stock > 0 ? `Còn ${item.stock}` : 'Hết hàng'}
+                  <div className='font-bold'>{item.color} / {item.size}</div>
+                  <div className='mt-1 text-xs opacity-80'>{item.stock > 0 ? `Tồn kho: ${item.stock} sản phẩm` : 'Hết hàng'}</div>
                 </button>
               ))}
             </div>
           )}
-          <div className='flex items-center gap-4'>
-            <div className='flex h-14 items-center border border-zinc-300 bg-white'>
-              <button type='button' disabled={quantity <= 1} onClick={() => setQuantity((value) => value - 1)} className='h-full w-12 transition-colors hover:bg-zinc-100 disabled:opacity-30'><Minus className='mx-auto' size={16} /></button>
-              <span className='w-10 text-center font-bold'>{quantity}</span>
-              <button type='button' disabled={!variant || quantity >= variant.stock} onClick={() => setQuantity((value) => value + 1)} className='h-full w-12 transition-colors hover:bg-zinc-100 disabled:opacity-30'><Plus className='mx-auto' size={16} /></button>
+          <div className='space-y-3'>
+            {variant && (
+              <div className='flex items-center justify-between text-xs font-semibold text-zinc-600'>
+                <span>Số lượng mua:</span>
+                <span>
+                  {variant.stock > 0 ? (
+                    <span className='text-zinc-500'>Tồn kho sẵn có: <strong className='text-black font-bold'>{variant.stock}</strong> sản phẩm</span>
+                  ) : (
+                    <span className='text-red-600 font-bold'>Sản phẩm tạm hết hàng</span>
+                  )}
+                </span>
+              </div>
+            )}
+            <div className='flex items-center gap-4'>
+              <div className='flex h-14 items-center border border-zinc-300 bg-white'>
+                <button type='button' disabled={quantity <= 1 || !variant || variant.stock < 1} onClick={() => setQuantity((value) => value - 1)} className='h-full w-12 transition-colors hover:bg-zinc-100 disabled:opacity-30'><Minus className='mx-auto' size={16} /></button>
+                <span className='w-10 text-center font-bold'>{quantity}</span>
+                <button type='button' disabled={!variant || quantity >= variant.stock || variant.stock < 1} onClick={() => setQuantity((value) => value + 1)} className='h-full w-12 transition-colors hover:bg-zinc-100 disabled:opacity-30'><Plus className='mx-auto' size={16} /></button>
+              </div>
+              <button
+                type='button'
+                disabled={isMutating || !variant || variant.stock < 1}
+                onClick={add}
+                className='flex h-14 flex-1 items-center justify-center gap-2 bg-black px-5 text-sm font-bold uppercase text-white shadow transition-all duration-200 hover:bg-zinc-800 hover:shadow-lg active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed'
+              >
+                <ShoppingBag size={18} />
+                {isMutating ? 'Đang thêm...' : !variant ? 'Chọn phiên bản' : variant.stock < 1 ? 'Hết hàng' : 'Thêm vào giỏ'}
+                <ArrowRight size={18} />
+              </button>
             </div>
-            <button
-              type='button'
-              disabled={isMutating || !variant}
-              onClick={add}
-              className='flex h-14 flex-1 items-center justify-center gap-2 bg-black px-5 text-sm font-bold uppercase text-white shadow transition-all duration-200 hover:bg-zinc-800 hover:shadow-lg active:scale-[0.98] disabled:opacity-50'
-            >
-              <ShoppingBag size={18} />
-              {isMutating ? 'Đang thêm...' : 'Thêm vào giỏ'}
-              <ArrowRight size={18} />
-            </button>
           </div>
         </section>
       </div>
