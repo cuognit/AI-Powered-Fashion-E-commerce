@@ -15,8 +15,9 @@ function ProductImage({ product, className = '' }) {
 
 function ProductCard({ product, onQuickView }) {
   const inStock = product.variants?.some((variant) => variant.stock > 0)
-  const price = product.sale_price ?? product.base_price
-  const hasSale = product.sale_price != null
+  const prices = (product.variants || []).filter((variant) => variant.stock > 0).map((variant) => variant.sale_price ?? variant.base_price ?? product.sale_price ?? product.base_price)
+  const price = prices.length ? Math.min(...prices) : (product.sale_price ?? product.base_price)
+  const hasSale = prices.length ? product.variants.some((variant) => variant.stock > 0 && variant.sale_price != null) : product.sale_price != null
   return <article className='group min-w-0'>
     <div className='relative aspect-[3/4] overflow-hidden'>
       <button type='button' onClick={() => onQuickView(product)} className='block h-full w-full' aria-label={`Xem nhanh ${product.name}`}>

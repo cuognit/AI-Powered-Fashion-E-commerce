@@ -7,7 +7,7 @@ export const cancelOrderSchema = z.object({
 })
 
 export const updateOrderStatusSchema = z.object({
-  status: z.enum(['processing', 'shipped', 'completed', 'canceled']),
+  status: z.enum(['processing', 'ready_to_ship', 'shipped', 'canceled']),
   note: z.string().trim().max(500).optional().default(''),
   carrier: z.string().trim().max(100).optional(),
   trackingCode: z.string().trim().max(100).optional(),

@@ -8,6 +8,12 @@ const orderItemSchema = new mongoose.Schema(
     image_url: { type: String, default: '' },
     color: { type: String, trim: true },
     size: { type: String, trim: true },
+    selected_options: [{
+      attribute_name: { type: String, trim: true },
+      attribute_slug: { type: String, trim: true },
+      value_name: { type: String, trim: true },
+      value_slug: { type: String, trim: true },
+    }],
     quantity: { type: Number, required: true, min: 1 },
     price: { type: Number, required: true, min: 0 },
   },
@@ -18,7 +24,7 @@ const statusHistorySchema = new mongoose.Schema(
   {
     event: {
       type: String,
-      enum: ['order_created', 'payment_confirmed', 'processing', 'shipped', 'completed', 'canceled', 'refund_requested', 'refund_completed'],
+      enum: ['order_created', 'payment_confirmed', 'processing', 'ready_to_ship', 'shipped', 'completed', 'canceled', 'refund_requested', 'refund_completed'],
       required: true,
     },
     occurred_at: { type: Date, default: Date.now },
@@ -81,7 +87,7 @@ const orderSchema = new mongoose.Schema(
     inventory_released_at: { type: Date, default: null },
     status: {
       type: String,
-      enum: ['pending_payment', 'pending', 'processing', 'shipped', 'completed', 'canceled'],
+      enum: ['pending', 'processing', 'ready_to_ship', 'shipped', 'completed', 'canceled'],
       default: 'pending',
       index: true,
     },

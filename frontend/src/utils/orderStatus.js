@@ -1,9 +1,9 @@
 export const orderStatusMeta = {
-  pending_payment: { label: 'Chờ thanh toán', tone: 'amber' },
   pending: { label: 'Chờ xác nhận', tone: 'amber' },
-  processing: { label: 'Đang xử lý', tone: 'blue' },
+  processing: { label: 'Chờ xử lý đơn', tone: 'blue' },
+  ready_to_ship: { label: 'Chờ vận chuyển', tone: 'cyan' },
   shipped: { label: 'Đang giao', tone: 'violet' },
-  completed: { label: 'Hoàn tất', tone: 'emerald' },
+  completed: { label: 'Đã giao', tone: 'emerald' },
   canceled: { label: 'Đã hủy', tone: 'red' },
 }
 
@@ -24,6 +24,7 @@ export const cancelReasonLabels = {
 export const statusToneClasses = {
   amber: 'bg-amber-50 text-amber-700 ring-amber-200',
   blue: 'bg-blue-50 text-blue-700 ring-blue-200',
+  cyan: 'bg-cyan-50 text-cyan-700 ring-cyan-200',
   violet: 'bg-violet-50 text-violet-700 ring-violet-200',
   emerald: 'bg-emerald-50 text-emerald-700 ring-emerald-200',
   red: 'bg-red-50 text-red-700 ring-red-200',

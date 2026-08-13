@@ -1,20 +1,17 @@
-import { Outlet, useLocation } from 'react-router-dom'
+import { Outlet } from 'react-router-dom'
 import Header from '../components/Header'
 import Footer from '../components/Footer'
 import WishlistSync from '../components/WishlistSync.jsx'
 
 export default function MainLayout() {
-  const { pathname } = useLocation()
-  const isCatalogPage = ['/collections', '/shop', '/products'].includes(pathname)
-
   return (
-    <div className={`${isCatalogPage ? 'h-screen overflow-hidden' : 'min-h-screen'} flex flex-col bg-[#fafafa] text-gray-900 font-sans selection:bg-black selection:text-white`}>
+    <div className='shop-shell flex min-h-screen flex-col bg-[#fafafa] font-sans text-gray-900 selection:bg-black selection:text-white'>
       <WishlistSync />
       <Header />
-      <main className={`flex-grow ${isCatalogPage ? 'min-h-0 overflow-hidden' : ''}`}>
+      <main className='flex-grow'>
         <Outlet />
       </main>
-      {!isCatalogPage && <Footer />}
+      <Footer />
     </div>
   )
 }

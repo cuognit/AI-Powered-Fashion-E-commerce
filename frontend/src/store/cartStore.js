@@ -10,6 +10,14 @@ const useCartStore = create((set, get) => ({
   shippingDetails: { fullName: '', phone: '', address: '', city: '', postalCode: '', notes: '' },
   setPaymentMethod: (paymentMethod) => set({ paymentMethod }),
   setShippingDetails: (field, value) => set((state) => ({ shippingDetails: { ...state.shippingDetails, [field]: value } })),
+  hydrateShippingDetails: (profile = {}) => set((state) => ({
+    shippingDetails: {
+      ...state.shippingDetails,
+      fullName: state.shippingDetails.fullName.trim() ? state.shippingDetails.fullName : profile.name || '',
+      phone: state.shippingDetails.phone.trim() ? state.shippingDetails.phone : profile.phone || '',
+      address: state.shippingDetails.address.trim() ? state.shippingDetails.address : profile.address || '',
+    },
+  })),
   resetCart: () => set({ items: [], hasLoaded: false, error: null }),
   fetchCart: async (force = false) => {
     if (get().isLoading || (get().hasLoaded && !force)) return

@@ -1,110 +1,25 @@
-import { useEffect, useMemo, useState } from 'react'
-import { useParams } from 'react-router-dom'
 import { ArrowRight, ChevronLeft, ChevronRight, Minus, Plus, ShoppingBag } from 'lucide-react'
+import { useEffect, useMemo, useState } from 'react'
 import toast from 'react-hot-toast'
+import { useParams } from 'react-router-dom'
+import FavoriteButton from '../../components/FavoriteButton.jsx'
 import { getProductById } from '../../services/productApi.js'
 import useCartStore from '../../store/cartStore.js'
-import FavoriteButton from '../../components/FavoriteButton.jsx'
-
-const getMessage = (error) => error.response?.data?.message || 'Không thể thêm sản phẩm vào giỏ hàng'
 
 export default function ProductDetail() {
-  const { id } = useParams()
-  const [product, setProduct] = useState(null)
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
-  const [imageIndex, setImageIndex] = useState(0)
-  const [selectedSku, setSelectedSku] = useState('')
-  const [quantity, setQuantity] = useState(1)
-  const addItem = useCartStore((state) => state.addItem)
-  const isMutating = useCartStore((state) => state.isMutating)
-
-  useEffect(() => {
-    let active = true
-    setLoading(true)
-    getProductById(id)
-      .then(({ data }) => { if (active) setProduct(data.data || data) })
-      .catch(() => { if (active) setError('Không thể tải sản phẩm') })
-      .finally(() => { if (active) setLoading(false) })
-    return () => { active = false }
-  }, [id])
-
-  const selectedVariant = useMemo(
-    () => product?.variants?.find((variant) => variant.sku === selectedSku),
-    [product, selectedSku],
-  )
-  const price = product ? (product.sale_price ?? product.base_price) : 0
-
-  const selectVariant = (variant) => {
-    if (variant.stock < 1) return
-    setSelectedSku(variant.sku)
-    setQuantity(1)
-  }
-
-  const handleAdd = async () => {
-    if (!selectedVariant) return toast.error('Vui lòng chọn màu và kích thước')
-    if (quantity < 1 || quantity > selectedVariant.stock) return toast.error('Số lượng không hợp lệ')
-    try {
-      await addItem(product._id, selectedVariant.sku, quantity)
-      toast.success('Đã thêm sản phẩm vào giỏ hàng')
-    } catch (requestError) { toast.error(getMessage(requestError)) }
-  }
-
-  if (loading) return <div className="min-h-[60vh] grid place-items-center">Đang tải sản phẩm...</div>
-  if (error || !product) return <div className="min-h-[60vh] grid place-items-center text-red-600">{error || 'Không tìm thấy sản phẩm'}</div>
-
-  const images = product.images?.length ? product.images : ['https://placehold.co/800x1000?text=Product']
-
-  return (
-    <main className="min-h-screen bg-[#f7f6f4] py-10 text-zinc-900">
-      <div className="mx-auto grid max-w-[1360px] gap-10 px-4 sm:px-6 lg:px-8 lg:grid-cols-2">
-        <section>
-          <div className="relative overflow-hidden bg-zinc-100">
-            <img src={images[imageIndex]} alt={product.name} className="aspect-[4/5] w-full object-cover" />
-            {images.length > 1 && <>
-              <button onClick={() => setImageIndex((imageIndex - 1 + images.length) % images.length)} className="absolute left-4 top-1/2 grid h-10 w-10 place-items-center bg-white"><ChevronLeft /></button>
-              <button onClick={() => setImageIndex((imageIndex + 1) % images.length)} className="absolute right-4 top-1/2 grid h-10 w-10 place-items-center bg-white"><ChevronRight /></button>
-            </>}
-          </div>
-        </section>
-
-        <section className="space-y-8 lg:sticky lg:top-8 lg:self-start">
-          <div>
-            <p className="mb-2 text-xs font-bold uppercase tracking-[.2em] text-zinc-500">{product.brand}</p>
-            <div className="flex items-start justify-between gap-4"><h1 className="text-4xl font-black uppercase leading-tight">{product.name}</h1><FavoriteButton product={product} className="shrink-0" /></div>
-            <div className="mt-4 flex items-center gap-3 text-2xl font-bold">
-              <span>{price.toLocaleString('vi-VN')} đ</span>
-              {product.sale_price != null && <span className="text-base text-zinc-400 line-through">{product.base_price.toLocaleString('vi-VN')} đ</span>}
-            </div>
-          </div>
-          {product.description && <p className="leading-7 text-zinc-600">{product.description}</p>}
-
-          <div>
-            <div className="mb-3 flex justify-between text-xs font-bold uppercase tracking-wider">
-              <span>Chọn phiên bản</span><span>{selectedVariant ? `${selectedVariant.color} / ${selectedVariant.size}` : 'Bắt buộc'}</span>
-            </div>
-            <div className="grid gap-2 sm:grid-cols-2">
-              {product.variants?.map((variant) => (
-                <button key={variant.sku} disabled={variant.stock < 1} onClick={() => selectVariant(variant)} className={`border p-3 text-left text-sm ${selectedSku === variant.sku ? 'border-black bg-black text-white' : 'bg-white'} disabled:cursor-not-allowed disabled:opacity-40`}>
-                  <strong>{variant.color} / {variant.size}</strong>
-                  <span className="ml-2 text-xs">{variant.stock > 0 ? `Còn ${variant.stock}` : 'Hết hàng'}</span>
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="flex items-center gap-4">
-            <div className="flex h-14 items-center border bg-white">
-              <button disabled={quantity <= 1} onClick={() => setQuantity((value) => value - 1)} className="grid h-full w-12 place-items-center disabled:opacity-30"><Minus size={16} /></button>
-              <span className="w-10 text-center font-bold">{quantity}</span>
-              <button disabled={!selectedVariant || quantity >= selectedVariant.stock} onClick={() => setQuantity((value) => value + 1)} className="grid h-full w-12 place-items-center disabled:opacity-30"><Plus size={16} /></button>
-            </div>
-            <button disabled={isMutating || product.status !== 'available'} onClick={handleAdd} className="flex h-14 flex-1 items-center justify-center gap-2 bg-black px-5 text-sm font-bold uppercase tracking-widest text-white disabled:opacity-50">
-              <ShoppingBag size={18} /> {isMutating ? 'Đang thêm...' : 'Thêm vào giỏ'} <ArrowRight size={18} />
-            </button>
-          </div>
-        </section>
-      </div>
-    </main>
-  )
+  const { id } = useParams(); const [product, setProduct] = useState(null); const [loading, setLoading] = useState(true); const [error, setError] = useState(''); const [imageIndex, setImageIndex] = useState(0); const [selectedSku, setSelectedSku] = useState(''); const [selected, setSelected] = useState({}); const [quantity, setQuantity] = useState(1)
+  const addItem = useCartStore((state) => state.addItem); const isMutating = useCartStore((state) => state.isMutating)
+  useEffect(() => { let active = true; getProductById(id).then(({ data }) => active && setProduct(data.data || data)).catch(() => active && setError('Không thể tải sản phẩm')).finally(() => active && setLoading(false)); return () => { active = false } }, [id])
+  const variant = useMemo(() => product?.variants?.find((item) => item.sku === selectedSku), [product, selectedSku])
+  if (loading) return <div className='grid min-h-[60vh] place-items-center'>Đang tải sản phẩm...</div>
+  if (error || !product) return <div className='grid min-h-[60vh] place-items-center text-red-600'>{error || 'Không tìm thấy sản phẩm'}</div>
+  const images = variant?.images?.length ? variant.images : product.images?.length ? product.images : ['https://placehold.co/800x1000?text=Product']; const price = variant?.effective_price ?? product.min_price ?? product.sale_price ?? product.base_price
+  const choose = (attributeId, valueId) => { const next = { ...selected, [attributeId]: valueId }; setSelected(next); setQuantity(1); const match = product.variants.find((item) => item.option_values?.every((option) => next[String(option.attribute_id)] === String(option.value_id))); setSelectedSku(match?.stock > 0 ? match.sku : ''); setImageIndex(0) }
+  const available = (attributeId, valueId) => product.variants.some((item) => item.stock > 0 && item.option_values?.some((option) => String(option.attribute_id) === attributeId && String(option.value_id) === valueId) && item.option_values.every((option) => String(option.attribute_id) === attributeId || !selected[String(option.attribute_id)] || selected[String(option.attribute_id)] === String(option.value_id)))
+  const add = async () => { if (!variant) return toast.error('Vui lòng chọn đầy đủ thuộc tính sản phẩm'); if (quantity > variant.stock) return toast.error('Số lượng không hợp lệ'); try { await addItem(product._id, variant.sku, quantity); toast.success('Đã thêm sản phẩm vào giỏ hàng') } catch (requestError) { toast.error(requestError.response?.data?.message || 'Không thể thêm vào giỏ') } }
+  return <main className='min-h-screen bg-[#f7f6f4] py-10 text-zinc-900'><div className='mx-auto grid max-w-[1360px] gap-10 px-4 sm:px-6 lg:grid-cols-2 lg:px-8'><section><div className='relative overflow-hidden bg-zinc-100'><img src={images[Math.min(imageIndex, images.length - 1)]} alt={product.name} className='aspect-[4/5] w-full object-cover'/>{images.length > 1 && <><button onClick={() => setImageIndex((imageIndex - 1 + images.length) % images.length)} className='absolute left-4 top-1/2 grid h-10 w-10 place-items-center bg-white'><ChevronLeft/></button><button onClick={() => setImageIndex((imageIndex + 1) % images.length)} className='absolute right-4 top-1/2 grid h-10 w-10 place-items-center bg-white'><ChevronRight/></button></>}</div></section>
+    <section className='space-y-8 lg:sticky lg:top-8 lg:self-start'><div><p className='mb-2 text-xs font-bold uppercase tracking-[.2em] text-zinc-500'>{product.brand}</p><div className='flex items-start justify-between gap-4'><h1 className='text-4xl font-black uppercase leading-tight'>{product.name}</h1><FavoriteButton product={product}/></div><div className='mt-4 flex items-center gap-3 text-2xl font-bold'><span>{price.toLocaleString('vi-VN')} đ</span>{variant?.sale_price != null && variant?.base_price != null && <span className='text-base text-zinc-400 line-through'>{variant.base_price.toLocaleString('vi-VN')} đ</span>}</div></div>{product.description && <p className='leading-7 text-zinc-600'>{product.description}</p>}
+      {product.option_axes?.length ? <div className='space-y-5'>{product.option_axes.map((axis) => { const attributeId = String(axis.attribute_id); const options = product.variants.flatMap((item) => item.option_values || []); return <div key={attributeId}><div className='mb-2 flex justify-between text-xs font-bold uppercase'><span>{axis.attribute_name}</span><span>{options.find((option) => String(option.attribute_id) === attributeId && String(option.value_id) === selected[attributeId])?.value_name || 'Bắt buộc'}</span></div><div className='flex flex-wrap gap-2'>{axis.value_ids.map((rawId) => { const valueId = String(rawId); const option = options.find((item) => String(item.attribute_id) === attributeId && String(item.value_id) === valueId); return <button type='button' key={valueId} disabled={!available(attributeId, valueId)} onClick={() => choose(attributeId, valueId)} className={`flex items-center gap-2 border px-4 py-3 text-sm ${selected[attributeId] === valueId ? 'bg-black text-white' : 'bg-white'} disabled:opacity-30`}>{option?.color_hex && <span className='h-4 w-4 rounded-full border' style={{ backgroundColor: option.color_hex }}/>} {option?.value_name}</button> })}</div></div>})}</div> : <div className='grid gap-2 sm:grid-cols-2'>{product.variants.map((item) => <button key={item.sku} disabled={item.stock < 1} onClick={() => { setSelectedSku(item.sku); setQuantity(1) }} className={`border p-3 text-left ${selectedSku === item.sku ? 'bg-black text-white' : 'bg-white'} disabled:opacity-30`}>{item.color} / {item.size} · {item.stock > 0 ? `Còn ${item.stock}` : 'Hết hàng'}</button>)}</div>}
+      <div className='flex items-center gap-4'><div className='flex h-14 items-center border bg-white'><button disabled={quantity <= 1} onClick={() => setQuantity((value) => value - 1)} className='h-full w-12 disabled:opacity-30'><Minus className='mx-auto' size={16}/></button><span className='w-10 text-center font-bold'>{quantity}</span><button disabled={!variant || quantity >= variant.stock} onClick={() => setQuantity((value) => value + 1)} className='h-full w-12 disabled:opacity-30'><Plus className='mx-auto' size={16}/></button></div><button disabled={isMutating || !variant} onClick={add} className='flex h-14 flex-1 items-center justify-center gap-2 bg-black px-5 text-sm font-bold uppercase text-white disabled:opacity-50'><ShoppingBag size={18}/>{isMutating ? 'Đang thêm...' : 'Thêm vào giỏ'}<ArrowRight size={18}/></button></div>
+    </section></div></main>
 }

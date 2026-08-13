@@ -72,7 +72,7 @@ export default function ProfilePage() {
       const profile = data?.user || {}
       setEmail(profile.email || '')
       profileForm.reset({ name: profile.name || '', phone: profile.phone || '', address: profile.address || '' })
-      if (authUser && profile.name) updateUser({ name: profile.name })
+      if (authUser) updateUser(profile)
       setPasswordChange(data?.passwordChange || null)
     } catch (error) {
       setLoadError(messageOf(error))
@@ -88,7 +88,7 @@ export default function ProfilePage() {
     setSavingProfile(true)
     try {
       const { data } = await updateProfileRequest({ name, phone, address })
-      if (data?.user) updateUser({ name: data.user.name })
+      if (data?.user) updateUser(data.user)
       toast.success('Đã cập nhật thông tin cá nhân')
     } catch (error) {
       toast.error(messageOf(error))
@@ -206,4 +206,3 @@ export default function ProfilePage() {
     </main>
   )
 }
-

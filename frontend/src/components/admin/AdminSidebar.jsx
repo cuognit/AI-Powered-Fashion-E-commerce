@@ -1,4 +1,4 @@
-import { Boxes, ChevronRight, LayoutDashboard, PackageSearch, Settings, Tags, Users } from 'lucide-react'
+import { Badge, Boxes, ChevronRight, LayoutDashboard, PackageSearch, Settings, SlidersHorizontal, Tags, Users } from 'lucide-react'
 import { Link, NavLink } from 'react-router-dom'
 
 const groups = [
@@ -8,6 +8,8 @@ const groups = [
     items: [
       { label: 'Sản phẩm', path: '/admin/products', icon: Boxes },
       { label: 'Danh mục', path: '/admin/categories', icon: Tags },
+      { label: 'Thương hiệu', path: '/admin/brands', icon: Badge },
+      { label: 'Thuộc tính', path: '/admin/attributes', icon: SlidersHorizontal },
       { label: 'Đơn hàng', path: '/admin/orders', icon: PackageSearch },
       { label: 'Khách hàng', path: '/admin/customers', icon: Users },
     ],

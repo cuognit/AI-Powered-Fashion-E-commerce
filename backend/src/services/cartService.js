@@ -2,6 +2,7 @@ import mongoose from 'mongoose'
 import Cart from '../models/Cart.js'
 import Product from '../models/product.model.js'
 import { AppError } from '../utils/AppError.js'
+import { assetUrl, selectedOptions, variantPrice } from '../utils/productVariant.js'
 
 function validateQuantity(quantity) {
   if (!Number.isInteger(quantity) || quantity < 1) throw new AppError('Số lượng phải là số nguyên dương', 400)
@@ -28,9 +29,10 @@ function serializeCart(cart) {
     return [{
       id: `${product._id}:${variant.sku}`,
       productId: String(product._id), variantSku: variant.sku,
-      name: product.name, brand: product.brand, image: product.images?.[0] || '',
-      price: product.sale_price ?? product.base_price, basePrice: product.base_price,
+      name: product.name, brand: product.brand, image: assetUrl(product, variant),
+      price: variantPrice(product, variant), basePrice: variant.base_price ?? product.base_price,
       color: variant.color, size: variant.size, stock: variant.stock,
+      selectedOptions: selectedOptions(variant),
       quantity: item.quantity, isAvailable: variant.stock > 0,
     }]
   }) }

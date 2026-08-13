@@ -1,7 +1,9 @@
-import { useState } from 'react'
-import { ArrowRight, ShieldCheck, Truck, WalletCards } from 'lucide-react'
+import { useEffect, useState } from 'react'
+import { ArrowRight, Save, ShieldCheck, Truck, WalletCards } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { useNavigate } from 'react-router-dom'
+import useAuth from '../../hooks/useAuth.js'
+import { getProfile, updateProfile } from '../../services/authApi.js'
 import useCartStore from '../../store/cartStore.js'
 import { createCodOrder, createVnpayPayment } from '../../services/paymentApi.js'
 import { formatCurrency } from '../../utils/formatCurrency.js'
@@ -12,14 +14,38 @@ const fields = [
   ['postalCode', 'Mã bưu chính', '700000'], ['notes', 'Ghi chú', 'Giao giờ hành chính'],
 ]
 
+const profileSyncLabels = {
+  loading: 'Đang lấy hồ sơ',
+  loaded: 'Đã điền từ hồ sơ',
+  error: 'Không thể tự điền, vui lòng nhập thủ công',
+}
+
 export default function Checkout() {
   const navigate = useNavigate()
   const store = useCartStore()
+  const { user, updateUser } = useAuth()
   const [couponInput, setCouponInput] = useState('')
   const [submitting, setSubmitting] = useState(false)
+  const [savingProfile, setSavingProfile] = useState(false)
+  const [profileSync, setProfileSync] = useState('loading')
   const subtotal = store.getSubtotal()
   const discount = store.getDiscountAmount()
   const total = store.getTotal()
+
+  useEffect(() => {
+    let active = true
+    store.hydrateShippingDetails(user || {})
+    getProfile()
+      .then(({ data }) => {
+        if (!active) return
+        const profile = data?.user || {}
+        store.hydrateShippingDetails(profile)
+        updateUser(profile)
+        setProfileSync('loaded')
+      })
+      .catch(() => { if (active) setProfileSync('error') })
+    return () => { active = false }
+  }, [])
 
   const applyCoupon = (event) => {
     event.preventDefault()
@@ -32,6 +58,23 @@ export default function Checkout() {
     ...store.shippingDetails,
     coupon: store.appliedCoupon || undefined,
   })
+
+  const saveCheckoutProfile = async () => {
+    const { fullName, phone, address } = store.shippingDetails
+    if (fullName.trim().length < 2) {
+      toast.error('Vui lòng nhập họ tên trước khi cập nhật hồ sơ')
+      return
+    }
+    setSavingProfile(true)
+    try {
+      const { data } = await updateProfile({ name: fullName, phone, address })
+      if (data?.user) updateUser(data.user)
+      setProfileSync('loaded')
+      toast.success('Đã cập nhật thông tin vào hồ sơ')
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Không thể cập nhật hồ sơ')
+    } finally { setSavingProfile(false) }
+  }
 
   const placeOrder = async () => {
     if (!store.shippingDetails.fullName.trim() || !store.shippingDetails.phone.trim() || !store.shippingDetails.address.trim() || !store.shippingDetails.city.trim()) {
@@ -59,7 +102,12 @@ export default function Checkout() {
         <section className="space-y-8">
           <h1 className="border-b border-black pb-3 text-3xl font-black uppercase">Thanh toán</h1>
           <div className="bg-white p-6 shadow-sm">
-            <h2 className="mb-5 text-sm font-black uppercase tracking-wider">Thông tin giao hàng</h2>
+            <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
+              <h2 className="text-sm font-black uppercase tracking-wider">Thông tin giao hàng</h2>
+              <span className={profileSync === 'loaded' ? 'text-[10px] font-bold text-emerald-700' : profileSync === 'error' ? 'text-[10px] font-bold text-amber-700' : 'text-[10px] font-bold uppercase text-neutral-400'}>
+                {profileSyncLabels[profileSync]}
+              </span>
+            </div>
             <div className="grid gap-4 sm:grid-cols-2">
               {fields.map(([name, label, placeholder]) => (
                 <label key={name} className={name === 'address' || name === 'notes' ? 'sm:col-span-2' : ''}>
@@ -68,6 +116,12 @@ export default function Checkout() {
                     className="w-full border border-gray-200 bg-gray-50 px-3.5 py-3 text-sm outline-none focus:border-black focus:bg-white" />
                 </label>
               ))}
+            </div>
+            <div className="mt-5 flex flex-col items-start justify-between gap-3 border-t border-neutral-200 pt-4 sm:flex-row sm:items-center">
+              <p className="text-xs leading-5 text-neutral-500">Lưu họ tên, số điện thoại và địa chỉ này làm thông tin mặc định cho lần thanh toán sau.</p>
+              <button type="button" onClick={saveCheckoutProfile} disabled={savingProfile || profileSync === 'loading'} className="flex shrink-0 items-center gap-2 border border-black bg-white px-4 py-2.5 text-[10px] font-black uppercase disabled:opacity-40">
+                <Save className="h-4 w-4" />{savingProfile ? 'Đang cập nhật...' : 'Cập nhật vào hồ sơ'}
+              </button>
             </div>
           </div>
           <div className="bg-white p-6 shadow-sm">

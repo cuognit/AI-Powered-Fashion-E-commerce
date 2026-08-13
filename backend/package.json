@@ -6,7 +6,10 @@
   "scripts": {
     "dev": "node --watch src/server.js",
     "start": "node src/server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "migrate:order-statuses": "node scripts/migrateOrderStatuses.js",
+    "migrate:catalog-variants": "node scripts/migrateBrandsAndVariants.js",
+    "seed:real-catalog": "node scripts/seedRealCatalog.js"
   },
   "dependencies": {
     "axios": "^1.19.0",

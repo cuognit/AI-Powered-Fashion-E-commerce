@@ -3,9 +3,9 @@ import { Link } from 'react-router-dom'
 
 const modules = [
   { title: 'Đơn hàng', description: 'Theo dõi xử lý, vận chuyển và hoàn tiền.', path: '/admin/orders', icon: PackageSearch, featured: true, status: 'Đang hoạt động' },
-  { title: 'Sản phẩm', description: 'Quản lý danh mục hàng hóa và tồn kho.', path: '/admin/products', icon: Boxes, status: 'Sắp ra mắt' },
-  { title: 'Danh mục', description: 'Tổ chức bộ sưu tập và nhóm sản phẩm.', path: '/admin/categories', icon: Tags, status: 'Sắp ra mắt' },
-  { title: 'Khách hàng', description: 'Xem hồ sơ và lịch sử mua sắm.', path: '/admin/customers', icon: Users, status: 'Sắp ra mắt' },
+  { title: 'Sản phẩm', description: 'Quản lý danh mục hàng hóa và tồn kho.', path: '/admin/products', icon: Boxes, status: 'Đang hoạt động' },
+  { title: 'Danh mục', description: 'Tổ chức bộ sưu tập và nhóm sản phẩm.', path: '/admin/categories', icon: Tags, status: 'Đang hoạt động' },
+  { title: 'Khách hàng', description: 'Xem hồ sơ và lịch sử mua sắm.', path: '/admin/customers', icon: Users, status: 'Đang hoạt động' },
   { title: 'Cài đặt', description: 'Cấu hình vận hành cửa hàng.', path: '/admin/settings', icon: Settings, status: 'Sắp ra mắt' },
 ]
 

@@ -25,3 +25,8 @@ export async function reorder(request, response, next) {
   try { response.json(await orderService.reorder(request.user.sub, request.params.orderCode)) }
   catch (error) { next(error) }
 }
+
+export async function confirmReceived(request, response, next) {
+  try { response.json(await orderService.confirmOrderReceived(request.user.sub, request.params.orderCode)) }
+  catch (error) { next(error) }
+}

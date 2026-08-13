@@ -9,6 +9,8 @@ const pageTitles = {
   '/admin': 'Bảng điều khiển',
   '/admin/products': 'Quản lý sản phẩm',
   '/admin/categories': 'Quản lý danh mục',
+  '/admin/brands': 'Quản lý thương hiệu',
+  '/admin/attributes': 'Quản lý thuộc tính',
   '/admin/orders': 'Quản lý đơn hàng',
   '/admin/customers': 'Quản lý khách hàng',
   '/admin/settings': 'Cài đặt hệ thống',
@@ -45,7 +47,7 @@ export default function AdminLayout() {
   }
 
   return (
-    <div className='min-h-screen bg-[#ece9e2] text-neutral-950'>
+    <div className='admin-shell min-h-screen bg-[#ece9e2] text-neutral-950'>
       <div className='fixed inset-y-0 left-0 z-40 hidden lg:block'><AdminSidebar /></div>
 
       <div className={`fixed inset-0 z-[80] lg:hidden ${sidebarOpen ? 'pointer-events-auto' : 'pointer-events-none'}`} aria-hidden={!sidebarOpen}>

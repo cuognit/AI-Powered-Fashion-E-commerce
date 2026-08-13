@@ -69,6 +69,9 @@ export const buildProductEmbeddingText = (product) => {
     if (sizes.length) parts.push(`Kích thước: ${sizes.join(', ')}`);
   }
 
+  const dynamicOptions = [...new Set((product.variants || []).flatMap((variant) => (variant.option_values || []).map((option) => `${option.attribute_name}: ${option.value_name}`)))];
+  if (dynamicOptions.length) parts.push(`Thuộc tính: ${dynamicOptions.join(', ')}`);
+
   return parts.join('. ');
 };
 

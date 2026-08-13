@@ -36,9 +36,17 @@ export const getProducts = async (req, res) => {
 // Lấy chi tiết 1 sản phẩm
 export const getProductById = async (req, res) => {
   try {
-    const product = await Product.findOne({ _id: req.params.id, is_deleted: false });
+    const product = await Product.findOne({ _id: req.params.id, is_deleted: false, status: 'available', business_enabled: { $ne: false } }).populate('brand_id', 'name slug');
     if (!product) return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm' });
-    res.status(200).json({ success: true, data: product });
+    const row = product.toObject();
+    const assetMap = new Map((row.image_assets || []).map((asset) => [String(asset._id), asset.url]));
+    const gallery = (row.gallery_asset_ids || []).map((id) => assetMap.get(String(id))).filter(Boolean);
+    if (gallery.length) row.images = gallery;
+    const prices = row.variants.filter((variant) => variant.stock > 0).map((variant) => variant.sale_price ?? variant.base_price ?? row.sale_price ?? row.base_price);
+    row.variants = row.variants.map((variant) => ({ ...variant, effective_price: variant.sale_price ?? variant.base_price ?? row.sale_price ?? row.base_price, images: (variant.image_asset_ids || []).map((id) => assetMap.get(String(id))).filter(Boolean) }));
+    row.min_price = prices.length ? Math.min(...prices) : row.sale_price ?? row.base_price;
+    row.max_price = prices.length ? Math.max(...prices) : row.min_price;
+    res.status(200).json({ success: true, data: row });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }

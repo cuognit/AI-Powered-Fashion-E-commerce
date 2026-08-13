@@ -7,6 +7,7 @@ import Order from '../models/Order.js'
 import PaymentTransaction from '../models/PaymentTransaction.js'
 import Product from '../models/product.model.js'
 import { AppError } from '../utils/AppError.js'
+import { assetUrl, selectedOptions, variantPrice } from '../utils/productVariant.js'
 import { createVnpayUrl, formatVnpayDate, verifyVnpaySignature } from '../utils/vnpay.js'
 import { queryRequestId, signQueryRequest, verifyQueryResponse } from '../utils/vnpayQuery.js'
 
@@ -38,12 +39,12 @@ async function buildAndReserveCart(userId, checkout, session) {
     if (!Number.isInteger(cartItem.quantity) || cartItem.quantity < 1 || variant.stock < cartItem.quantity) {
       throw new AppError(`Không đủ tồn kho cho ${product.name}`, 409)
     }
-    const price = product.sale_price ?? product.base_price
+    const price = variantPrice(product, variant)
     if (!Number.isSafeInteger(price) || price < 0) throw new AppError('Giá sản phẩm không hợp lệ', 500)
     variant.stock -= cartItem.quantity
     await product.save({ session })
     subtotal += price * cartItem.quantity
-    items.push({ product_id: product._id, product_name: product.name, image_url: product.images?.[0] || '', variant_sku: variant.sku, color: variant.color, size: variant.size, quantity: cartItem.quantity, price })
+    items.push({ product_id: product._id, product_name: product.name, image_url: assetUrl(product, variant), variant_sku: variant.sku, color: variant.color, size: variant.size, selected_options: selectedOptions(variant), quantity: cartItem.quantity, price })
   }
 
   const discountPercent = discountFor(checkout.coupon)
@@ -66,7 +67,7 @@ async function createOrder(userId, checkout, method, ipAddress) {
         shipping_address: [checkout.address, checkout.city, checkout.postalCode].filter(Boolean).join(', '),
         phone_number: checkout.phone, note: checkout.notes, total_amount: totals.total,
         payment_method: method, payment_status: method === 'VNPAY' ? 'pending_payment' : 'cod_pending',
-        payment_expires_at: expiresAt, status: method === 'VNPAY' ? 'pending_payment' : 'pending', items: totals.items,
+        payment_expires_at: expiresAt, status: 'pending', items: totals.items,
         status_history: [{ event: 'order_created', actor_type: 'system', occurred_at: new Date() }],
       }], { session })
 
@@ -100,8 +101,9 @@ async function releaseInventory(order, session) {
   for (const item of order.items) {
     await Product.updateOne(
       { _id: item.product_id, 'variants.sku': item.variant_sku },
-      { $inc: { 'variants.$.stock': item.quantity } }, { session },
+      { $inc: { 'variants.$.stock': item.quantity, total_stock: item.quantity } }, { session },
     )
+    await Product.updateOne({ _id: item.product_id, business_enabled: { $ne: false } }, { $set: { status: 'available' } }, { session })
   }
   order.inventory_released_at = new Date()
 }
@@ -142,6 +144,16 @@ async function applyPaymentResult(paymentId, result, providerData = {}) {
       payment.bank_code = providerData.vnp_BankCode || payment.bank_code
       payment.card_type = providerData.vnp_CardType || payment.card_type
       payment.pay_date = providerData.vnp_PayDate || payment.pay_date
+      if (order.status === 'canceled' && result === 'paid') {
+        payment.status = 'payment_review'
+        payment.processed_at = null
+        payment.next_query_at = null
+        order.payment_status = 'payment_review'
+        await payment.save({ session })
+        await order.save({ session })
+        applied = true
+        return
+      }
       order.payment_status = result
       if (result === 'paid') {
         order.status = 'pending'
@@ -152,7 +164,7 @@ async function applyPaymentResult(paymentId, result, providerData = {}) {
         order.status_history.push({ event: 'canceled', actor_type: 'system', occurred_at: new Date(), note: 'Thanh toán không thành công' })
         await releaseInventory(order, session)
       } else {
-        order.status = 'pending_payment'
+        order.status = 'pending'
         payment.next_query_at = new Date(Date.now() + QUERY_RETRY_MS)
       }
       await payment.save({ session })
@@ -178,7 +190,10 @@ export async function processVnpayIpn(query) {
       bank_code: query.vnp_BankCode || null, card_type: query.vnp_CardType || null,
       pay_date: query.vnp_PayDate || null, next_query_at: null,
     } })
-    await Order.updateOne({ _id: payment.order_id, payment_status: 'expired' }, { $set: { payment_status: 'payment_review', status: 'pending_payment' } })
+    await Order.updateOne(
+      { _id: payment.order_id, payment_status: { $in: ['expired', 'pending_payment', 'payment_review'] } },
+      { $set: { payment_status: 'payment_review' } },
+    )
     return { RspCode: '00', Message: 'Confirm Success' }
   }
   if (!['pending', 'payment_review'].includes(payment.status)) return { RspCode: '02', Message: 'Order already confirmed' }
@@ -262,7 +277,7 @@ export async function reconcilePendingPayments(now = new Date()) {
 export async function expirePendingPayments(now = new Date()) {
   const candidates = await Order.find({
     payment_method: 'VNPAY',
-    status: 'pending_payment',
+    status: 'pending',
     payment_status: { $in: ['pending_payment', 'payment_review'] },
     payment_expires_at: { $lte: now },
   }).limit(50).lean()
@@ -273,7 +288,7 @@ export async function expirePendingPayments(now = new Date()) {
     try {
       await session.withTransaction(async () => {
         const order = await Order.findById(candidate._id).session(session)
-        if (!order || order.status !== 'pending_payment' || order.payment_status === 'paid') return
+        if (!order || order.status !== 'pending' || order.payment_status === 'paid') return
         await PaymentTransaction.updateOne(
           { order_id: order._id, status: { $in: ['pending', 'payment_review'] } },
           { $set: { status: 'expired' } },
