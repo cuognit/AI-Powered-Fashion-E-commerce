@@ -64,7 +64,7 @@ export default function ManageOrders() {
     setLoading(true); setError('')
     try {
       let result
-      if (view === 'customers') result = await listAdminCustomers({ page, limit: 15, search: search || undefined, sort: ['newest', 'oldest'].includes(sort) ? sort : 'newest' })
+      if (view === 'customers') result = await listAdminCustomers({ page, limit: 15, role: 'customer', search: search || undefined, sort: ['newest', 'oldest'].includes(sort) ? sort : 'newest' })
       else {
         const params = { page, limit: view === 'board' ? 50 : 15, status: status || undefined, paymentStatus: paymentStatus || undefined, paymentMethod: paymentMethod || undefined, sort, search: search || undefined }
         result = customer ? await listAdminCustomerOrders(customer.id, params) : await listAdminOrders(params)

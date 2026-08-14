@@ -10,6 +10,7 @@ const userSchema = new mongoose.Schema(
     address: { type: String, trim: true, default: '' },
     passwordChangedAt: { type: Date, default: null },
     passwordChangeCount: { type: Number, default: 0 },
+    isActive: { type: Boolean, default: true },
   },
   { timestamps: true },
 )

@@ -2,11 +2,10 @@ import axiosClient from './axiosClient.js'
 
 export const listAdminProducts = async (params) => (await axiosClient.get('/admin/products', { params })).data
 export const getAdminProduct = async (id) => (await axiosClient.get(`/admin/products/${id}`)).data.data
-export const saveAdminProduct = async (id, payload, files = []) => {
-  const form = new FormData()
-  form.append('payload', JSON.stringify(payload))
-  files.forEach((file) => form.append('images', file))
-  const response = id ? await axiosClient.patch(`/admin/products/${id}`, form) : await axiosClient.post('/admin/products', form)
+export const saveAdminProduct = async (id, payload) => {
+  const response = id
+    ? await axiosClient.patch(`/admin/products/${id}`, payload)
+    : await axiosClient.post('/admin/products', payload)
   return response.data.data
 }
 export const setAdminProductBusiness = async (id, enabled) => (await axiosClient.patch(`/admin/products/${id}/business`, { enabled })).data.data

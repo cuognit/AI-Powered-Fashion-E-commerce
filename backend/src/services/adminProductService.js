@@ -41,9 +41,36 @@ function uploadedAssets(files = []) {
 export async function destroyAssets(assets = []) {
   await Promise.allSettled(
     assets
-      .filter((asset) => asset.public_id)
+      .filter((asset) => asset && asset.public_id)
       .map((asset) => cloudinary.uploader.destroy(asset.public_id)),
   );
+}
+
+export function generateUploadSignature() {
+  const timestamp = Math.round(Date.now() / 1000);
+  const folder = 'fashion-ecommerce/products';
+  const paramsToSign = {
+    folder,
+    timestamp,
+  };
+
+  const secret = process.env.CLOUDINARY_API_SECRET;
+  const apiKey = process.env.CLOUDINARY_API_KEY;
+  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
+
+  if (!secret || !apiKey || !cloudName) {
+    throw new AppError('Cloudinary chưa được cấu hình trên hệ thống (thiếu API Key/Secret/Cloud Name)', 500);
+  }
+
+  const signature = cloudinary.utils.api_sign_request(paramsToSign, secret);
+
+  return {
+    signature,
+    timestamp,
+    folder,
+    apiKey,
+    cloudName,
+  };
 }
 
 function parsePayload(body) {
@@ -277,20 +304,43 @@ async function validateProduct(body, { currentId } = {}) {
   };
 }
 
-function mergeImages(payload, existing, fresh) {
+function normalizeAsset(raw, index) {
+  if (typeof raw === 'string') {
+    return {
+      _id: new mongoose.Types.ObjectId(),
+      url: raw.trim(),
+      public_id: null,
+      client_key: `new:${index}`,
+    };
+  }
+  const idStr = raw._id || raw.id;
+  return {
+    _id: mongoose.isValidObjectId(idStr)
+      ? new mongoose.Types.ObjectId(idStr)
+      : new mongoose.Types.ObjectId(),
+    url: String(raw.url || '').trim(),
+    public_id: raw.public_id ? String(raw.public_id).trim() : null,
+    client_key: raw.client_key || raw.id || `new:${index}`,
+  };
+}
+
+function mergeImages(payload, existing = [], fresh = []) {
   const manifest = Array.isArray(payload.media_manifest)
     ? payload.media_manifest
     : Array.isArray(payload.image_manifest)
       ? payload.image_manifest
       : null;
+
   const existingMap = new Map(
     existing.flatMap((asset) => [
       [String(asset._id), asset],
       [asset.url, asset],
+      ...(asset.client_key ? [[asset.client_key, asset]] : []),
     ]),
   );
-  let assets;
-  if (manifest)
+
+  let assets = [];
+  if (manifest && fresh.length > 0) {
     assets = manifest
       .map((item) =>
         item.type === "new"
@@ -298,33 +348,53 @@ function mergeImages(payload, existing, fresh) {
           : existingMap.get(String(item.id || item.url)),
       )
       .filter(Boolean);
-  else assets = [...existing, ...fresh];
+  } else if (Array.isArray(payload.image_assets) && payload.image_assets.length > 0) {
+    assets = payload.image_assets
+      .map((item, idx) => normalizeAsset(item, idx))
+      .filter((asset) => Boolean(asset.url));
+  } else if (Array.isArray(payload.images) && payload.images.length > 0) {
+    assets = payload.images
+      .map((url, idx) => normalizeAsset(url, idx))
+      .filter((asset) => Boolean(asset.url));
+  } else {
+    assets = [...existing, ...fresh];
+  }
+
   if (!assets.length || assets.length > 30)
     throw new AppError("Sản phẩm phải có từ 1 đến 30 ảnh", 400);
   return assets;
 }
 
 function applyMedia(payload, data, assets) {
-  const aliases = new Map(assets.flatMap((asset) => [[assetKey(asset), assetKey(asset)], ...(asset.client_key ? [[asset.client_key, assetKey(asset)]] : [])]));
+  const aliases = new Map(
+    assets.flatMap((asset) => {
+      const canonical = assetKey(asset);
+      return [
+        [canonical, canonical],
+        [asset.url, canonical],
+        ...(asset.client_key ? [[asset.client_key, canonical]] : []),
+        ...(asset.public_id ? [[asset.public_id, canonical]] : []),
+      ];
+    }),
+  );
+
   const fallbackGallery = assets.slice(0, 5).map(assetKey);
-  const requestedGallery = payload.gallery_asset_ids || fallbackGallery;
+  const requestedGallery = (Array.isArray(payload.gallery_asset_ids) && payload.gallery_asset_ids.length > 0)
+    ? payload.gallery_asset_ids
+    : fallbackGallery;
+
   const resolve = (ids) => (ids || []).map((id) => aliases.get(String(id))).filter(Boolean);
   const gallery = resolve(requestedGallery);
-  if (
-    !gallery.length ||
-    gallery.length > 5 ||
-    gallery.length !== requestedGallery.length
-  )
-    throw new AppError("Thư viện ảnh chính không hợp lệ", 400);
+
+  if (!gallery.length || gallery.length > 5)
+    throw new AppError("Thư viện ảnh chính không hợp lệ (cần từ 1 đến 5 ảnh)", 400);
+
   data.gallery_asset_ids = gallery;
   data.variants.forEach((variant) => {
     const requested = variant.image_asset_ids;
     variant.image_asset_ids = resolve(requested);
-    if (
-      requested.length > 5 ||
-      variant.image_asset_ids.length !== requested.length
-    )
-      throw new AppError(`Ảnh của SKU ${variant.sku} không hợp lệ`, 400);
+    if (requested && requested.length > 5)
+      throw new AppError(`Ảnh của SKU ${variant.sku} không được vượt quá 5 ảnh`, 400);
   });
 }
 
@@ -373,30 +443,31 @@ export async function listProducts(query = {}) {
       throw new AppError("Thương hiệu không hợp lệ", 400);
     filter.brand_id = query.brandId;
   }
-  if (query.search?.trim()) {
-    const regex = new RegExp(escapeRegex(query.search.trim()), "i");
-    filter.$or = [{ name: regex }, { brand: regex }, { "variants.sku": regex }];
-  }
   if (query.stock === "in") filter["variants.stock"] = { $gt: 0 };
-  if (query.stock === "out") filter.status = "out_of_stock";
-  const [rows, total, statusRows] = await Promise.all([
+  if (query.stock === "out") filter.total_stock = { $lte: 0 };
+  if (query.search?.trim()) {
+    const term = new RegExp(escapeRegex(query.search.trim()), "i");
+    filter.$or = [{ name: term }, { "variants.sku": term }, { brand: term }];
+  }
+  const sort = sortMap[query.sort] || { createdAt: -1 };
+  const [rows, total, available, hidden, outOfStock] = await Promise.all([
     Product.find(filter)
       .populate("category_id", "name slug")
       .populate("brand_id", "name slug")
-      .sort(sortMap[query.sort] || { createdAt: -1, _id: -1 })
+      .sort(sort)
       .skip(skip)
       .limit(limit)
       .lean(),
     Product.countDocuments(filter),
-    Product.aggregate([
-      { $match: { is_deleted: filter.is_deleted } },
-      { $group: { _id: "$status", count: { $sum: 1 } } },
-    ]),
+    Product.countDocuments({ is_deleted: false, status: "available" }),
+    Product.countDocuments({ is_deleted: false, status: "hidden" }),
+    Product.countDocuments({ is_deleted: false, status: "out_of_stock" }),
   ]);
-  const counts = { available: 0, hidden: 0, out_of_stock: 0 };
-  statusRows.forEach((row) => {
-    counts[row._id] = row.count;
-  });
+  const counts = {
+    available,
+    hidden,
+    out_of_stock: outOfStock,
+  };
   return {
     data: rows.map(serialize),
     pagination: {
@@ -423,11 +494,16 @@ export async function getProduct(id) {
   return serialize(product);
 }
 
-export async function createProduct(body, files, adminId) {
+export async function createProduct(body, filesOrAdminId, maybeAdminId) {
+  const files = Array.isArray(filesOrAdminId) ? filesOrAdminId : [];
+  const adminId = Array.isArray(filesOrAdminId) ? maybeAdminId : filesOrAdminId;
   const fresh = uploadedAssets(files);
   try {
     const { payload, data } = await validateProduct(body);
-    const assets = mergeImages(payload, [], fresh);
+    const existingAssets = (payload.image_assets || [])
+      .map((item, idx) => normalizeAsset(item, idx))
+      .filter((asset) => Boolean(asset.url));
+    const assets = mergeImages(payload, existingAssets, fresh);
     applyMedia(payload, data, assets);
     const product = new Product({
       ...data,
@@ -445,7 +521,9 @@ export async function createProduct(body, files, adminId) {
   }
 }
 
-export async function updateProduct(id, body, files, adminId) {
+export async function updateProduct(id, body, filesOrAdminId, maybeAdminId) {
+  const files = Array.isArray(filesOrAdminId) ? filesOrAdminId : [];
+  const adminId = Array.isArray(filesOrAdminId) ? maybeAdminId : filesOrAdminId;
   const fresh = uploadedAssets(files);
   try {
     if (!mongoose.isValidObjectId(id))
@@ -454,16 +532,30 @@ export async function updateProduct(id, body, files, adminId) {
     if (!product) throw new AppError("Không tìm thấy sản phẩm", 404);
     const { payload, data } = await validateProduct(body, { currentId: id });
     const oldAssets = product.image_assets?.length
-      ? product.image_assets.map((asset) => asset.toObject())
+      ? product.image_assets.map((asset) => asset.toObject ? asset.toObject() : asset)
       : [];
-    const assets = mergeImages(payload, oldAssets, fresh);
+
+    let baseAssets = oldAssets;
+    if (Array.isArray(payload.image_assets) && payload.image_assets.length > 0) {
+      baseAssets = payload.image_assets
+        .map((item, idx) => normalizeAsset(item, idx))
+        .filter((asset) => Boolean(asset.url));
+    }
+
+    const assets = mergeImages(payload, baseAssets, fresh);
     applyMedia(payload, data, assets);
     product.set({ ...data, image_assets: assets, updated_by: adminId });
     const vector = await getTextEmbedding(buildProductEmbeddingText(product));
     if (vector?.length === 384) product.embedding_vector = vector;
     await product.save();
-    const retained = new Set(assets.map((asset) => asset.url));
-    await destroyAssets(oldAssets.filter((asset) => !retained.has(asset.url)));
+
+    const retainedUrls = new Set(assets.map((asset) => asset.url));
+    const retainedPublicIds = new Set(assets.map((asset) => asset.public_id).filter(Boolean));
+    const assetsToDestroy = oldAssets.filter(
+      (asset) => asset && asset.public_id && !retainedUrls.has(asset.url) && !retainedPublicIds.has(asset.public_id),
+    );
+    await destroyAssets(assetsToDestroy);
+
     return serialize(product);
   } catch (error) {
     await destroyAssets(fresh);

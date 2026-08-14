@@ -1,18 +1,290 @@
-import { Pencil, Plus, RotateCcw, Search, Trash2 } from 'lucide-react'
+import { Loader2, Pencil, Plus, RotateCcw, Search, Trash2 } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
 import { createAdminBrand, listAdminBrands, purgeAdminBrand, restoreAdminBrand, trashAdminBrand, updateAdminBrand } from '../../services/adminProductApi.js'
 
 const messageOf = (error) => error.response?.data?.message || 'Không thể xử lý thương hiệu'
+
 export default function ManageBrands() {
-  const [rows, setRows] = useState([]), [search, setSearch] = useState(''), [trash, setTrash] = useState(false), [editing, setEditing] = useState(undefined), [form, setForm] = useState({ name: '', description: '' })
-  const load = useCallback(() => listAdminBrands({ limit: 100, search: search || undefined, trash }).then((result) => setRows(result.data || [])).catch((error) => toast.error(messageOf(error))), [search, trash])
+  const [rows, setRows] = useState([])
+  const [search, setSearch] = useState('')
+  const [trash, setTrash] = useState(false)
+  const [editing, setEditing] = useState(undefined)
+  const [form, setForm] = useState({ name: '', description: '' })
+  const [selectedIds, setSelectedIds] = useState([])
+  const [busyBulk, setBusyBulk] = useState(false)
+
+  const load = useCallback(
+    () =>
+      listAdminBrands({ limit: 100, search: search || undefined, trash })
+        .then((result) => setRows(result.data || []))
+        .catch((error) => toast.error(messageOf(error))),
+    [search, trash]
+  )
+
   useEffect(() => { load() }, [load])
-  const open = (row = null) => { setEditing(row); setForm({ name: row?.name || '', description: row?.description || '' }) }
-  const submit = async (event) => { event.preventDefault(); try { editing?._id ? await updateAdminBrand(editing._id, form) : await createAdminBrand(form); toast.success('Đã lưu thương hiệu'); setEditing(undefined); load() } catch (error) { toast.error(messageOf(error)) } }
-  const remove = async (row, permanent) => { if (!confirm(`${permanent ? 'Xóa vĩnh viễn' : 'Chuyển vào thùng rác'} “${row.name}”?`)) return; try { permanent ? await purgeAdminBrand(row._id) : await trashAdminBrand(row._id); load() } catch (error) { toast.error(messageOf(error)) } }
-  return <section className='px-4 py-8 lg:px-8'><div className='mx-auto max-w-[1200px]'><header className='flex items-end justify-between border-b border-black pb-6'><div><p className='text-xs font-bold uppercase tracking-[.25em] text-neutral-500'>Danh mục hàng hóa</p><h1 className='mt-2 text-4xl font-black uppercase'>Thương hiệu</h1></div><button onClick={() => open()} className='flex items-center gap-2 bg-black px-5 py-3 text-xs font-black uppercase text-white'><Plus className='h-4 w-4'/>Thêm thương hiệu</button></header>
-    <div className='mt-5 flex gap-3 bg-white p-4'><label className='flex flex-1 items-center border px-3'><Search className='h-4 w-4'/><input value={search} onChange={(event) => setSearch(event.target.value)} placeholder='Tìm thương hiệu...' className='w-full p-3 outline-none'/></label><button onClick={() => setTrash(!trash)} className={`px-4 text-xs font-black uppercase ${trash ? 'bg-red-700 text-white' : 'border'}`}>{trash ? 'Đang xem thùng rác' : 'Thùng rác'}</button></div>
-    <div className='mt-5 divide-y bg-white'>{rows.map((row) => <article key={row._id} className='flex items-center gap-4 p-5'><div className='min-w-0 flex-1'><div className='flex items-center gap-2'><b>{row.name}</b>{row.is_system && <span className='bg-neutral-200 px-2 py-1 text-[9px] font-bold uppercase'>Hệ thống</span>}</div><p className='text-xs text-neutral-500'>/{row.slug} · {row.product_count} sản phẩm</p><p className='mt-1 text-sm text-neutral-600'>{row.description}</p></div><div className='flex gap-2'>{trash ? <><button onClick={() => restoreAdminBrand(row._id).then(load)} className='border p-2'><RotateCcw className='h-4 w-4'/></button><button onClick={() => remove(row, true)} className='bg-red-700 p-2 text-white'><Trash2 className='h-4 w-4'/></button></> : <><button onClick={() => open(row)} className='border p-2'><Pencil className='h-4 w-4'/></button><button disabled={row.is_system || row.product_count > 0} onClick={() => remove(row)} className='border p-2 text-red-700 disabled:opacity-30'><Trash2 className='h-4 w-4'/></button></>}</div></article>)}</div>
-  </div>{editing !== undefined && <div className='fixed inset-0 z-[100] bg-black/60'><form onSubmit={submit} className='absolute inset-y-0 right-0 w-full max-w-lg bg-white p-8'><h2 className='text-2xl font-black uppercase'>{editing?._id ? 'Sửa' : 'Thêm'} thương hiệu</h2><label className='mt-8 block text-xs font-bold uppercase'>Tên<input autoFocus required minLength='2' value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className='mt-2 w-full border p-3 normal-case'/></label><label className='mt-5 block text-xs font-bold uppercase'>Mô tả<textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} className='mt-2 min-h-32 w-full border p-3 normal-case'/></label><div className='mt-8 flex gap-3'><button type='button' onClick={() => setEditing(undefined)} className='flex-1 border py-3'>Hủy</button><button className='flex-1 bg-black py-3 text-white'>Lưu</button></div></form></div>}</section>
+  useEffect(() => { setSelectedIds([]) }, [trash, search])
+
+  const open = (row = null) => {
+    setEditing(row)
+    setForm({ name: row?.name || '', description: row?.description || '' })
+  }
+
+  const submit = async (event) => {
+    event.preventDefault()
+    try {
+      if (editing?._id) await updateAdminBrand(editing._id, form)
+      else await createAdminBrand(form)
+      toast.success('Đã lưu thương hiệu')
+      setEditing(undefined)
+      load()
+    } catch (error) {
+      toast.error(messageOf(error))
+    }
+  }
+
+  const remove = async (row, permanent) => {
+    if (!confirm(`${permanent ? 'Xóa vĩnh viễn' : 'Chuyển vào thùng rác'} “${row.name}”?`)) return
+    try {
+      if (permanent) await purgeAdminBrand(row._id)
+      else await trashAdminBrand(row._id)
+      load()
+    } catch (error) {
+      toast.error(messageOf(error))
+    }
+  }
+
+  // Multi-select handlers
+  const allSelected = rows.length > 0 && rows.every((r) => selectedIds.includes(r._id))
+  const someSelected = rows.some((r) => selectedIds.includes(r._id)) && !allSelected
+  const toggleSelectAll = () => setSelectedIds(allSelected ? [] : rows.map((r) => r._id))
+  const toggleSelectOne = (id) => setSelectedIds((curr) => curr.includes(id) ? curr.filter((item) => item !== id) : [...curr, id])
+
+  // Bulk actions
+  const bulkTrash = async () => {
+    const selectedRows = rows.filter((r) => selectedIds.includes(r._id))
+    const systemOrWithProducts = selectedRows.filter((r) => r.is_system || r.product_count > 0)
+    if (systemOrWithProducts.length > 0) {
+      toast.error(`Có ${systemOrWithProducts.length} thương hiệu hệ thống hoặc đang chứa sản phẩm, không thể xóa`)
+      return
+    }
+    if (!window.confirm(`Chuyển ${selectedIds.length} thương hiệu đã chọn vào thùng rác?`)) return
+    setBusyBulk(true)
+    try {
+      await Promise.all(selectedIds.map((id) => trashAdminBrand(id)))
+      toast.success(`Đã chuyển ${selectedIds.length} thương hiệu vào thùng rác`)
+      setSelectedIds([])
+      await load()
+    } catch (err) {
+      toast.error(messageOf(err))
+    } finally {
+      setBusyBulk(false)
+    }
+  }
+
+  const bulkRestore = async () => {
+    setBusyBulk(true)
+    try {
+      await Promise.all(selectedIds.map((id) => restoreAdminBrand(id)))
+      toast.success(`Đã khôi phục ${selectedIds.length} thương hiệu`)
+      setSelectedIds([])
+      await load()
+    } catch (err) {
+      toast.error(messageOf(err))
+    } finally {
+      setBusyBulk(false)
+    }
+  }
+
+  const bulkPurge = async () => {
+    if (!window.confirm(`Xóa vĩnh viễn ${selectedIds.length} thương hiệu đã chọn? Hành động này không thể hoàn tác!`)) return
+    setBusyBulk(true)
+    try {
+      await Promise.all(selectedIds.map((id) => purgeAdminBrand(id)))
+      toast.success(`Đã xóa vĩnh viễn ${selectedIds.length} thương hiệu`)
+      setSelectedIds([])
+      await load()
+    } catch (err) {
+      toast.error(messageOf(err))
+    } finally {
+      setBusyBulk(false)
+    }
+  }
+
+  return (
+    <section className='relative px-4 py-8 lg:px-8'>
+      <div className='mx-auto max-w-[1200px] pb-24'>
+        <header className='flex items-end justify-between border-b border-black pb-6'>
+          <div>
+            <p className='text-xs font-bold uppercase tracking-[.25em] text-neutral-500'>Danh mục hàng hóa</p>
+            <h1 className='mt-2 text-4xl font-black uppercase'>Thương hiệu</h1>
+          </div>
+          <button onClick={() => open()} className='flex items-center gap-2 bg-black px-5 py-3 text-xs font-black uppercase text-white'>
+            <Plus className='h-4 w-4'/>Thêm thương hiệu
+          </button>
+        </header>
+
+        <div className='mt-5 flex flex-wrap items-center gap-3 bg-white p-4'>
+          <label className='flex items-center gap-2 pr-3 border-r border-neutral-200'>
+            <input
+              type='checkbox'
+              checked={allSelected}
+              ref={(el) => { if (el) el.indeterminate = someSelected }}
+              onChange={toggleSelectAll}
+              disabled={!rows.length}
+              className='h-4 w-4 accent-black cursor-pointer'
+            />
+            <span className='text-xs font-bold uppercase text-neutral-600'>Chọn tất cả</span>
+          </label>
+          <label className='flex flex-1 items-center border px-3'>
+            <Search className='h-4 w-4 text-neutral-400'/>
+            <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder='Tìm thương hiệu...' className='w-full p-3 outline-none text-sm'/>
+          </label>
+          <button onClick={() => setTrash(!trash)} className={`px-4 py-3 text-xs font-black uppercase ${trash ? 'bg-red-700 text-white' : 'border'}`}>
+            {trash ? 'Đang xem thùng rác' : 'Thùng rác'}
+          </button>
+        </div>
+
+        <div className='mt-5 divide-y bg-white shadow-sm'>
+          {!rows.length ? (
+            <div className='p-12 text-center text-neutral-500 font-bold uppercase text-xs'>Không có thương hiệu</div>
+          ) : (
+            rows.map((row) => {
+              const isSelected = selectedIds.includes(row._id)
+              return (
+                <article key={row._id} className={`flex items-center gap-4 p-5 transition hover:bg-neutral-50 ${isSelected ? 'bg-neutral-100/70' : ''}`}>
+                  <input
+                    type='checkbox'
+                    checked={isSelected}
+                    onChange={() => toggleSelectOne(row._id)}
+                    className='h-4 w-4 accent-black cursor-pointer'
+                  />
+                  <div className='min-w-0 flex-1'>
+                    <div className='flex items-center gap-2'>
+                      <b>{row.name}</b>
+                      {row.is_system && <span className='bg-neutral-200 px-2 py-0.5 text-[9px] font-bold uppercase'>Hệ thống</span>}
+                    </div>
+                    <p className='text-xs text-neutral-500'>/{row.slug} · {row.product_count} sản phẩm</p>
+                    <p className='mt-1 text-sm text-neutral-600'>{row.description}</p>
+                  </div>
+                  <div className='flex gap-2'>
+                    {trash ? (
+                      <>
+                        <button onClick={() => restoreAdminBrand(row._id).then(load)} className='border p-2' title='Khôi phục'><RotateCcw className='h-4 w-4'/></button>
+                        <button onClick={() => remove(row, true)} className='bg-red-700 p-2 text-white' title='Xóa vĩnh viễn'><Trash2 className='h-4 w-4'/></button>
+                      </>
+                    ) : (
+                      <>
+                        <button onClick={() => open(row)} className='border p-2'><Pencil className='h-4 w-4'/></button>
+                        <button disabled={row.is_system || row.product_count > 0} onClick={() => remove(row)} className='border p-2 text-red-700 disabled:opacity-30'><Trash2 className='h-4 w-4'/></button>
+                      </>
+                    )}
+                  </div>
+                </article>
+              )
+            })
+          )}
+        </div>
+      </div>
+
+      {/* Floating Bulk Actions Bar with gentle slide-up animation */}
+      <aside
+        className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-wrap items-center justify-center gap-3 bg-neutral-950/95 backdrop-blur-md text-white px-5 py-3.5 shadow-2xl border border-neutral-800 rounded-none max-w-[95vw] sm:max-w-none transition-all duration-300 ease-out ${
+          selectedIds.length > 0
+            ? 'translate-y-0 opacity-100 pointer-events-auto shadow-[0_20px_50px_rgba(0,0,0,0.5)]'
+            : 'translate-y-12 opacity-0 pointer-events-none'
+        }`}
+      >
+        <div className='flex items-center gap-2 pr-3 border-r border-neutral-700'>
+          <span className='flex h-6 min-w-6 px-1.5 items-center justify-center bg-white text-black font-black text-xs'>
+            {selectedIds.length}
+          </span>
+          <span className='text-xs font-bold whitespace-nowrap'>Đã chọn</span>
+        </div>
+
+        {!trash ? (
+          <div className='flex flex-wrap items-center gap-2'>
+            {(() => {
+              const selectedRows = rows.filter((r) => selectedIds.includes(r._id))
+              const blockedCount = selectedRows.filter((r) => r.is_system || (r.product_count || 0) > 0).length
+              const canTrash = selectedRows.length > 0 && blockedCount === 0
+
+              return (
+                <div className='flex items-center gap-2'>
+                  <button
+                    type='button'
+                    disabled={!canTrash || busyBulk}
+                    onClick={bulkTrash}
+                    title={
+                      !canTrash
+                        ? `Có ${blockedCount} thương hiệu hệ thống hoặc đang chứa sản phẩm, không thể xóa`
+                        : `Chuyển ${selectedIds.length} thương hiệu vào thùng rác`
+                    }
+                    className='bg-red-700 hover:bg-red-600 px-3.5 py-2 text-xs font-black uppercase transition disabled:opacity-40 disabled:cursor-not-allowed flex items-center gap-1.5'
+                  >
+                    <Trash2 className='h-3.5 w-3.5' /> Thùng rác ({selectedIds.length})
+                  </button>
+                  {!canTrash && (
+                    <span className='text-[10px] text-amber-400 font-bold'>
+                      ({blockedCount} thương hiệu không thể xóa)
+                    </span>
+                  )}
+                </div>
+              )
+            })()}
+          </div>
+        ) : (
+          <div className='flex flex-wrap items-center gap-2'>
+            <button
+              type='button'
+              disabled={busyBulk}
+              onClick={bulkRestore}
+              className='bg-emerald-700 hover:bg-emerald-600 px-3.5 py-2 text-xs font-black uppercase transition disabled:opacity-50 flex items-center gap-1.5'
+            >
+              <RotateCcw className='h-3.5 w-3.5' /> Khôi phục ({selectedIds.length})
+            </button>
+            <button
+              type='button'
+              disabled={busyBulk}
+              onClick={bulkPurge}
+              className='bg-red-700 hover:bg-red-600 px-3.5 py-2 text-xs font-black uppercase transition disabled:opacity-50 flex items-center gap-1.5'
+            >
+              <Trash2 className='h-3.5 w-3.5' /> Xóa vĩnh viễn
+            </button>
+          </div>
+        )}
+
+        <button
+          type='button'
+          disabled={busyBulk}
+          onClick={() => setSelectedIds([])}
+          className='ml-2 text-xs text-neutral-400 hover:text-white underline uppercase font-bold transition disabled:opacity-50'
+        >
+          Bỏ chọn
+        </button>
+
+        {busyBulk && <Loader2 className='h-4 w-4 animate-spin text-white ml-1' />}
+      </aside>
+
+      {editing !== undefined && (
+        <div className='fixed inset-0 z-[100] bg-black/60'>
+          <form onSubmit={submit} className='absolute inset-y-0 right-0 w-full max-w-lg bg-white p-8'>
+            <h2 className='text-2xl font-black uppercase'>{editing?._id ? 'Sửa' : 'Thêm'} thương hiệu</h2>
+            <label className='mt-8 block text-xs font-bold uppercase'>
+              Tên
+              <input autoFocus required minLength='2' value={form.name} onChange={(event) => setForm({ ...form, name: event.target.value })} className='mt-2 w-full border p-3 normal-case'/>
+            </label>
+            <label className='mt-5 block text-xs font-bold uppercase'>
+              Mô tả
+              <textarea value={form.description} onChange={(event) => setForm({ ...form, description: event.target.value })} className='mt-2 min-h-32 w-full border p-3 normal-case'/>
+            </label>
+            <div className='mt-8 flex gap-3'>
+              <button type='button' onClick={() => setEditing(undefined)} className='flex-1 border py-3'>Hủy</button>
+              <button className='flex-1 bg-black py-3 text-white'>Lưu</button>
+            </div>
+          </form>
+        </div>
+      )}
+    </section>
+  )
 }

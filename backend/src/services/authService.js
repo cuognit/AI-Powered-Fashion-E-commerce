@@ -27,6 +27,7 @@ function toPublicUser(user) {
     name: user.name,
     email: user.email,
     role: user.role,
+    isActive: user.isActive !== false,
     phone: user.phone || '',
     address: user.address || '',
   }
@@ -133,6 +134,10 @@ export async function loginUser({ email, password }) {
     throw new AppError('Invalid email or password', 401)
   }
 
+  if (user.isActive === false) {
+    throw new AppError('Tài khoản của bạn đã bị vô hiệu hóa', 403)
+  }
+
   clearCredentialFailures(lockKey)
 
   const tokens = createTokens(user)
@@ -174,10 +179,12 @@ export async function refreshAccessToken(refreshToken) {
     throw new AppError('Invalid or expired refresh token', 401)
   }
 
-  const user = await User.findById(payload.sub).select('_id role passwordChangedAt')
+  const user = await User.findById(payload.sub).select('_id role isActive passwordChangedAt')
 
-  if (!user) {
-    throw new AppError('Invalid or expired refresh token', 401)
+  if (!user || user.isActive === false) {
+    storedToken.revoked_at = new Date()
+    await storedToken.save()
+    throw new AppError(user?.isActive === false ? 'Tài khoản của bạn đã bị vô hiệu hóa' : 'Invalid or expired refresh token', 401)
   }
 
   // Reject refresh tokens issued before the user's last password change.

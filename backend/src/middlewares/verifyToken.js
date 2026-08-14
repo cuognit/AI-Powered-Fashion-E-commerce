@@ -20,15 +20,22 @@ export async function verifyToken(request, _response, next) {
       throw new AppError('Token không hợp lệ', 401)
     }
 
-    // Reject access tokens issued before the user's last password change so an
-    // old session cannot survive a password reset.
-    const user = await User.findById(payload.sub).select('passwordChangedAt')
+    // Check user in DB to verify status, last password change, and get latest role.
+    const user = await User.findById(payload.sub).select('role isActive passwordChangedAt')
 
     if (!user || wasIssuedBeforePasswordChange(payload.iat, user.passwordChangedAt)) {
       throw new AppError('Phiên đăng nhập đã hết hạn, vui lòng đăng nhập lại', 401)
     }
 
-    request.user = payload
+    if (user.isActive === false) {
+      throw new AppError('Tài khoản của bạn đã bị vô hiệu hóa', 401)
+    }
+
+    request.user = {
+      ...payload,
+      role: user.role,
+      isActive: user.isActive !== false,
+    }
     next()
   } catch (error) {
     next(error instanceof AppError ? error : new AppError('Token không hợp lệ hoặc đã hết hạn', 401))

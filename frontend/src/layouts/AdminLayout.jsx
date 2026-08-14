@@ -12,7 +12,7 @@ const pageTitles = {
   '/admin/brands': 'Quản lý thương hiệu',
   '/admin/attributes': 'Quản lý thuộc tính',
   '/admin/orders': 'Quản lý đơn hàng',
-  '/admin/customers': 'Quản lý khách hàng',
+  '/admin/customers': 'Quản lý người dùng',
   '/admin/settings': 'Cài đặt hệ thống',
 }
 

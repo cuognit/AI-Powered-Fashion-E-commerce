@@ -3,4 +3,4 @@ dist/
 .env
 *.log
 .aider*
-repomix-output.xml
+repomix-output.*

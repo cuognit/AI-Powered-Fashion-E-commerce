@@ -11,7 +11,7 @@ const groups = [
       { label: 'Thương hiệu', path: '/admin/brands', icon: Badge },
       { label: 'Thuộc tính', path: '/admin/attributes', icon: SlidersHorizontal },
       { label: 'Đơn hàng', path: '/admin/orders', icon: PackageSearch },
-      { label: 'Khách hàng', path: '/admin/customers', icon: Users },
+      { label: 'Người dùng', path: '/admin/customers', icon: Users },
     ],
   },
   { label: 'Hệ thống', items: [{ label: 'Cài đặt', path: '/admin/settings', icon: Settings }] },
