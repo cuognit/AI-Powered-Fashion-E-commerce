@@ -28,31 +28,341 @@ function ReviewSection({ productId }) {
   const [rating, setRating] = useState(5)
   const [content, setContent] = useState('')
   const [submitting, setSubmitting] = useState(false)
-  const loadReviews = async () => { const { data } = await getReviewsByProduct(productId); setReviewData(data.data || data) }
-  const loadEligibility = async (focusSku = '') => { if (!isAuthenticated) { setEligibleVariants([]); return }; const { data } = await getReviewEligibility(productId); const variants = data.data?.variants || []; setEligibleVariants(variants); const target = variants.find((variant) => variant.variantSku === focusSku) || variants[0]; if (target) { setSelectedReviewSku(target.variantSku); if (target.review && focusSku === target.variantSku) { setEditingReview(target.review); setRating(target.review.rating); setContent(target.review.content) } } }
+  const [page, setPage] = useState(1)
+  const REVIEWS_PER_PAGE = 4
+
+  const loadReviews = async () => {
+    const { data } = await getReviewsByProduct(productId)
+    setReviewData(data.data || data)
+  }
+
+  const loadEligibility = async (focusSku = '') => {
+    if (!isAuthenticated) {
+      setEligibleVariants([])
+      return
+    }
+    const { data } = await getReviewEligibility(productId)
+    const variants = data.data?.variants || []
+    setEligibleVariants(variants)
+    const target = variants.find((variant) => variant.variantSku === focusSku) || variants[0]
+    if (target) {
+      setSelectedReviewSku(target.variantSku)
+      if (target.review && focusSku === target.variantSku) {
+        setEditingReview(target.review)
+        setRating(target.review.rating)
+        setContent(target.review.content)
+      }
+    }
+  }
+
   useEffect(() => { loadReviews().catch(() => {}) }, [productId])
   useEffect(() => { loadEligibility(requestedSku).catch(() => setEligibleVariants([])) }, [productId, isAuthenticated, requestedSku])
   useEffect(() => { if (requestedSku && sectionRef.current) sectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }) }, [requestedSku])
-  const beginEdit = (variant) => { if (!variant.review) return; setSelectedReviewSku(variant.variantSku); setEditingReview(variant.review); setRating(variant.review.rating); setContent(variant.review.content) }
-  const cancelEdit = () => { setEditingReview(null); setRating(5); setContent('') }
+
+  const beginEdit = (variant) => {
+    if (!variant.review) return
+    setSelectedReviewSku(variant.variantSku)
+    setEditingReview(variant.review)
+    setRating(variant.review.rating)
+    setContent(variant.review.content)
+  }
+
+  const cancelEdit = () => {
+    setEditingReview(null)
+    setRating(5)
+    setContent('')
+  }
+
   const submit = async (event) => {
     event.preventDefault()
     if (!selectedReviewSku || !content.trim()) return toast.error('Vui lòng chọn biến thể và nhập nội dung đánh giá')
     setSubmitting(true)
     try {
-      if (editingReview) { await updateReview(editingReview.id, { rating, content: content.trim() }); toast.success('Đã cập nhật đánh giá') } else { await addReview({ productId, variantSku: selectedReviewSku, rating, content: content.trim() }); toast.success('Đánh giá của bạn đã được đăng') }
-      cancelEdit(); await loadReviews(); await loadEligibility()
-    } catch (error) { toast.error(error.response?.data?.message || 'Không thể lưu đánh giá') } finally { setSubmitting(false) }
+      if (editingReview) {
+        await updateReview(editingReview.id, { rating, content: content.trim() })
+        toast.success('Đã cập nhật đánh giá')
+      } else {
+        await addReview({ productId, variantSku: selectedReviewSku, rating, content: content.trim() })
+        toast.success('Đánh giá của bạn đã được đăng')
+      }
+      cancelEdit()
+      await loadReviews()
+      await loadEligibility()
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Không thể lưu đánh giá')
+    } finally {
+      setSubmitting(false)
+    }
   }
-  const remove = async (review) => { if (!window.confirm('Bạn có chắc muốn xóa đánh giá này không?')) return; setSubmitting(true); try { await deleteReview(review.id); toast.success('Đã xóa đánh giá'); cancelEdit(); await loadReviews(); await loadEligibility() } catch (error) { toast.error(error.response?.data?.message || 'Không thể xóa đánh giá') } finally { setSubmitting(false) } }
+
+  const remove = async (review) => {
+    if (!window.confirm('Bạn có chắc muốn xóa đánh giá này không?')) return
+    setSubmitting(true)
+    try {
+      await deleteReview(review.id)
+      toast.success('Đã xóa đánh giá')
+      cancelEdit()
+      await loadReviews()
+      await loadEligibility()
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Không thể xóa đánh giá')
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
   const myVariants = eligibleVariants.filter((variant) => variant.review)
   const newVariants = eligibleVariants.filter((variant) => !variant.review)
   const { summary, reviews } = reviewData
-  return <section ref={sectionRef} className='mx-auto mt-14 max-w-[1360px] scroll-mt-8 border-t border-zinc-200 px-4 py-12 sm:px-6 lg:px-8'>
-    <div className='mb-10 flex flex-wrap items-end justify-between gap-4'><div><p className='mb-2 text-xs font-bold uppercase tracking-[.2em] text-zinc-500'>Cảm nhận khách hàng</p><h2 className='text-3xl font-black uppercase'>Đánh giá sản phẩm</h2></div><div className='flex items-center gap-3'><span className='text-4xl font-bold'>{summary.average.toFixed(1)}</span><div><Stars value={Math.round(summary.average)} /><p className='mt-1 text-xs text-zinc-500'>{summary.count} đánh giá</p></div></div></div>
-    <div className='grid gap-10 lg:grid-cols-[1fr_1.3fr]'><div className='space-y-3'>{[5, 4, 3, 2, 1].map((star) => <div key={star} className='flex items-center gap-3 text-sm'><span className='w-12'>{star} sao</span><div className='h-2 flex-1 bg-zinc-200'><div className='h-full bg-amber-500' style={{ width: `${summary.count ? (summary.distribution[star] / summary.count) * 100 : 0}%` }} /></div><span className='w-6 text-right text-zinc-500'>{summary.distribution[star]}</span></div>)}</div><div className='space-y-5'>{reviews.length ? reviews.map((review) => <article key={review.id} className='border-b border-zinc-200 pb-5'><div className='flex flex-wrap items-center justify-between gap-2'><div><p className='font-bold'>{review.user.name}</p><div className='mt-1 flex items-center gap-3'><Stars value={review.rating} /><time className='text-xs text-zinc-500'>{formatDate(review.createdAt)}</time></div></div><span className='text-xs text-zinc-500'>{[review.color && `Màu: ${review.color}`, review.size && `Size: ${review.size}`, ...(review.selectedOptions || []).map((option) => `${option.attribute_name}: ${option.value_name}`)].filter(Boolean).join(' · ') || `SKU: ${review.variantSku}`}</span></div><p className='mt-3 leading-6 text-zinc-700'>{review.content}</p></article>) : <p className='text-zinc-500'>Sản phẩm chưa có đánh giá nào.</p>}</div></div>
-    <div className='mt-12 border border-zinc-200 bg-white p-6'><h3 className='text-lg font-bold'>{editingReview ? 'Sửa đánh giá của bạn' : 'Chia sẻ trải nghiệm của bạn'}</h3>{!isAuthenticated ? <p className='mt-3 text-sm text-zinc-600'>Vui lòng <Link to='/login' className='font-bold underline'>đăng nhập</Link> để đánh giá sản phẩm.</p> : myVariants.length ? <div className='mt-5 space-y-4'>{myVariants.map((variant) => <div key={variant.variantSku} className='flex flex-wrap items-center justify-between gap-3 border-b pb-3'><span className='text-sm'>{variantLabel(variant) || variant.variantSku}</span><div className='flex gap-2'><button type='button' onClick={() => beginEdit(variant)} className='text-xs font-bold underline transition-colors hover:text-amber-600'>Sửa đánh giá</button><button type='button' disabled={submitting} onClick={() => remove(variant.review)} className='text-xs font-bold text-red-600 underline transition-colors hover:text-red-800 disabled:opacity-50'>Xóa</button></div></div>)}</div> : null}{isAuthenticated && (editingReview || newVariants.length) ? <form onSubmit={submit} className='mt-5 grid gap-4 md:grid-cols-2'><label className='text-sm font-semibold'>Biến thể đã mua<select disabled={Boolean(editingReview)} value={selectedReviewSku} onChange={(event) => { setSelectedReviewSku(event.target.value); setEditingReview(null) }} className='mt-2 h-12 w-full border border-zinc-300 bg-white px-3 font-normal'>{(editingReview ? eligibleVariants.filter((variant) => variant.variantSku === selectedReviewSku) : newVariants).map((variant) => <option key={variant.variantSku} value={variant.variantSku}>{variantLabel(variant) || variant.variantSku}</option>)}</select></label><div><p className='text-sm font-semibold'>Mức độ hài lòng</p><div className='mt-3'><Stars value={rating} interactive onChange={setRating} /></div></div><label className='text-sm font-semibold md:col-span-2'>Nội dung đánh giá<textarea value={content} maxLength={1000} onChange={(event) => setContent(event.target.value)} rows={4} className='mt-2 w-full border border-zinc-300 p-3 font-normal outline-none focus:border-black' placeholder='Hãy chia sẻ cảm nhận của bạn...' /></label><div className='flex items-center justify-between md:col-span-2'><span className='text-xs text-zinc-500'>{content.length}/1000 ký tự</span><div className='flex gap-2'>{editingReview && <button type='button' onClick={cancelEdit} className='border px-5 py-3 text-xs font-bold uppercase transition-all duration-200 hover:bg-zinc-100'>Hủy</button>}<button disabled={submitting} className='bg-black px-6 py-3 text-xs font-bold uppercase tracking-wider text-white transition-all duration-200 hover:bg-zinc-800 hover:shadow-md active:scale-95 disabled:opacity-50'>{submitting ? 'Đang lưu...' : editingReview ? 'Lưu thay đổi' : 'Gửi đánh giá'}</button></div></div></form> : isAuthenticated && !myVariants.length ? <p className='mt-3 text-sm text-zinc-600'>Bạn chưa có biến thể nào đủ điều kiện đánh giá. Hãy hoàn tất đơn hàng để chia sẻ trải nghiệm.</p> : null}</div>
-  </section>
+
+  const totalPages = Math.ceil(reviews.length / REVIEWS_PER_PAGE) || 1
+  const paginatedReviews = reviews.slice((page - 1) * REVIEWS_PER_PAGE, page * REVIEWS_PER_PAGE)
+
+  return (
+    <section ref={sectionRef} className='mx-auto mt-14 max-w-[1360px] scroll-mt-8 border-t border-zinc-200 px-4 py-12 sm:px-6 lg:px-8'>
+      <div className='mb-10 flex flex-wrap items-end justify-between gap-4'>
+        <div>
+          <p className='mb-2 text-xs font-bold uppercase tracking-[.2em] text-zinc-500'>Cảm nhận khách hàng</p>
+          <h2 className='text-3xl font-black uppercase'>Đánh giá sản phẩm</h2>
+        </div>
+        <div className='flex items-center gap-3'>
+          <span className='text-4xl font-bold'>{summary.average.toFixed(1)}</span>
+          <div>
+            <Stars value={Math.round(summary.average)} />
+            <p className='mt-1 text-xs text-zinc-500'>{summary.count} đánh giá</p>
+          </div>
+        </div>
+      </div>
+
+      <div className='grid gap-10 lg:grid-cols-[1fr_1.35fr] items-start'>
+        {/* Cột Trái: Biểu đồ sao + Khối "Đánh giá của bạn" ngay bên dưới */}
+        <div className='space-y-6'>
+          {/* Biểu đồ phân bổ sao */}
+          <div className='space-y-3 bg-zinc-50/70 p-5 rounded-xl border border-zinc-200/80'>
+            {[5, 4, 3, 2, 1].map((star) => (
+              <div key={star} className='flex items-center gap-3 text-sm'>
+                <span className='w-12 font-medium text-zinc-700'>{star} sao</span>
+                <div className='h-2 flex-1 rounded-full bg-zinc-200 overflow-hidden'>
+                  <div
+                    className='h-full bg-amber-500 rounded-full transition-all duration-300'
+                    style={{ width: `${summary.count ? (summary.distribution[star] / summary.count) * 100 : 0}%` }}
+                  />
+                </div>
+                <span className='w-6 text-right text-xs font-semibold text-zinc-500'>{summary.distribution[star]}</span>
+              </div>
+            ))}
+          </div>
+
+          {/* Khối "Đánh giá của bạn" & "Chia sẻ trải nghiệm" đặt ngay dưới biểu đồ */}
+          <div className='border border-zinc-200 bg-white p-5 rounded-xl shadow-xs'>
+            <h3 className='text-sm font-black uppercase tracking-wider text-black'>
+              {editingReview ? 'Sửa đánh giá của bạn' : myVariants.length ? 'Đánh giá của bạn' : 'Chia sẻ trải nghiệm'}
+            </h3>
+
+            {!isAuthenticated ? (
+              <p className='mt-3 text-xs text-zinc-600 leading-relaxed'>
+                Vui lòng <Link to='/login' className='font-bold text-black underline hover:text-amber-600'>đăng nhập</Link> để đánh giá sản phẩm này.
+              </p>
+            ) : (
+              <>
+                {/* Danh sách các đánh giá đã viết của user (Hiển thị đầy đủ sao, ngày giờ, nội dung) */}
+                {myVariants.length > 0 && (
+                  <div className='mt-4 space-y-3.5'>
+                    {myVariants.map((variant) => (
+                      <div key={variant.variantSku} className='rounded-lg bg-zinc-50/80 p-3.5 border border-zinc-200/70 space-y-2'>
+                        <div className='flex items-start justify-between gap-2'>
+                          <div className='min-w-0'>
+                            <p className='text-xs font-bold text-zinc-900 truncate'>
+                              {variantLabel(variant) || variant.variantSku}
+                            </p>
+                            <div className='mt-1 flex items-center gap-2'>
+                              <Stars value={variant.review.rating} />
+                              <time className='text-[11px] text-zinc-400 font-medium'>
+                                {formatDate(variant.review.createdAt || variant.review.updatedAt)}
+                              </time>
+                            </div>
+                          </div>
+                          <div className='flex shrink-0 items-center gap-2'>
+                            <button
+                              type='button'
+                              onClick={() => beginEdit(variant)}
+                              className='text-xs font-bold text-black underline hover:text-amber-600 transition cursor-pointer'
+                            >
+                              Sửa
+                            </button>
+                            <button
+                              type='button'
+                              disabled={submitting}
+                              onClick={() => remove(variant.review)}
+                              className='text-xs font-bold text-red-600 underline hover:text-red-800 disabled:opacity-50 transition cursor-pointer'
+                            >
+                              Xóa
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Nội dung đánh giá */}
+                        {variant.review.content && (
+                          <p className='text-xs text-zinc-700 leading-relaxed font-normal bg-white p-2.5 rounded border border-zinc-100'>
+                            {variant.review.content}
+                          </p>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Form viết đánh giá mới hoặc sửa đánh giá */}
+                {(editingReview || newVariants.length > 0) ? (
+                  <form onSubmit={submit} className='mt-5 space-y-4 border-t border-zinc-100 pt-4'>
+                    <label className='block text-xs font-bold text-zinc-800'>
+                      Biến thể đánh giá
+                      <select
+                        disabled={Boolean(editingReview)}
+                        value={selectedReviewSku}
+                        onChange={(event) => {
+                          setSelectedReviewSku(event.target.value)
+                          setEditingReview(null)
+                        }}
+                        className='mt-1.5 h-10 w-full rounded-lg border border-zinc-300 bg-white px-3 text-xs font-normal focus:border-black focus:outline-none'
+                      >
+                        {(editingReview ? eligibleVariants.filter((variant) => variant.variantSku === selectedReviewSku) : newVariants).map((variant) => (
+                          <option key={variant.variantSku} value={variant.variantSku}>
+                            {variantLabel(variant) || variant.variantSku}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+
+                    <div>
+                      <p className='text-xs font-bold text-zinc-800'>Mức độ hài lòng</p>
+                      <div className='mt-2'>
+                        <Stars value={rating} interactive onChange={setRating} />
+                      </div>
+                    </div>
+
+                    <label className='block text-xs font-bold text-zinc-800'>
+                      Nội dung đánh giá
+                      <textarea
+                        value={content}
+                        maxLength={1000}
+                        onChange={(event) => setContent(event.target.value)}
+                        rows={3}
+                        className='mt-1.5 w-full rounded-lg border border-zinc-300 p-3 text-xs font-normal outline-none focus:border-black'
+                        placeholder='Chia sẻ cảm nhận chi tiết của bạn về sản phẩm...'
+                      />
+                    </label>
+
+                    <div className='flex items-center justify-between gap-2 pt-1'>
+                      <span className='text-[10px] text-zinc-400 font-medium'>{content.length}/1000 ký tự</span>
+                      <div className='flex gap-2'>
+                        {editingReview && (
+                          <button
+                            type='button'
+                            onClick={cancelEdit}
+                            className='rounded-lg border border-zinc-300 px-3.5 py-2 text-xs font-bold uppercase transition hover:bg-zinc-100 cursor-pointer'
+                          >
+                            Hủy
+                          </button>
+                        )}
+                        <button
+                          disabled={submitting}
+                          className='rounded-lg bg-black px-4 py-2 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-zinc-800 active:scale-95 disabled:opacity-50 cursor-pointer'
+                        >
+                          {submitting ? 'Đang lưu...' : editingReview ? 'Lưu thay đổi' : 'Gửi đánh giá'}
+                        </button>
+                      </div>
+                    </div>
+                  </form>
+                ) : !myVariants.length ? (
+                  <p className='mt-3 text-xs text-zinc-500 leading-relaxed'>
+                    Bạn chưa có biến thể nào đã mua đủ điều kiện đánh giá. Hãy hoàn tất đơn hàng để chia sẻ trải nghiệm.
+                  </p>
+                ) : null}
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Cột Phải: Danh sách đánh giá cộng đồng + Phân trang */}
+        <div className='space-y-6'>
+          <div className='divide-y divide-zinc-200 border-t border-zinc-200'>
+            {paginatedReviews.length ? (
+              paginatedReviews.map((review) => (
+                <article key={review.id} className='py-5 first:pt-0'>
+                  <div className='flex flex-wrap items-start justify-between gap-2'>
+                    <div>
+                      <p className='font-bold text-sm text-zinc-900'>{review.user.name}</p>
+                      <div className='mt-1 flex items-center gap-3'>
+                        <Stars value={review.rating} />
+                        <time className='text-xs text-zinc-400 font-medium'>{formatDate(review.createdAt)}</time>
+                      </div>
+                    </div>
+                    <span className='rounded-md bg-zinc-100 px-2 py-0.5 text-[11px] font-medium text-zinc-600'>
+                      {[
+                        review.color && `Màu: ${review.color}`,
+                        review.size && `Size: ${review.size}`,
+                        ...(review.selectedOptions || []).map((option) => `${option.attribute_name}: ${option.value_name}`),
+                      ].filter(Boolean).join(' · ') || `SKU: ${review.variantSku}`}
+                    </span>
+                  </div>
+                  <p className='mt-3 text-sm leading-relaxed text-zinc-700'>{review.content}</p>
+                </article>
+              ))
+            ) : (
+              <p className='py-8 text-sm text-zinc-500'>Sản phẩm chưa có đánh giá nào.</p>
+            )}
+          </div>
+
+          {/* Phân trang đánh giá */}
+          {totalPages > 1 && (
+            <div className='flex flex-wrap items-center justify-between gap-3 border-t border-zinc-200 pt-5'>
+              <span className='text-xs text-zinc-500 font-medium'>
+                Hiển thị {(page - 1) * REVIEWS_PER_PAGE + 1} - {Math.min(page * REVIEWS_PER_PAGE, reviews.length)} trong {reviews.length} đánh giá
+              </span>
+
+              <div className='flex items-center gap-1.5'>
+                <button
+                  type='button'
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  disabled={page === 1}
+                  className='grid h-8 w-8 place-items-center rounded-lg border border-zinc-300 bg-white text-zinc-700 transition hover:border-black hover:text-black disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer'
+                  aria-label='Trang trước'
+                >
+                  <ChevronLeft size={16} />
+                </button>
+
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((num) => (
+                  <button
+                    key={num}
+                    type='button'
+                    onClick={() => setPage(num)}
+                    className={`h-8 min-w-8 rounded-lg px-2 text-xs font-bold transition cursor-pointer ${
+                      page === num
+                        ? 'bg-black text-white shadow-xs'
+                        : 'border border-zinc-300 bg-white text-zinc-700 hover:border-black hover:text-black'
+                    }`}
+                  >
+                    {num}
+                  </button>
+                ))}
+
+                <button
+                  type='button'
+                  onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={page === totalPages}
+                  className='grid h-8 w-8 place-items-center rounded-lg border border-zinc-300 bg-white text-zinc-700 transition hover:border-black hover:text-black disabled:cursor-not-allowed disabled:opacity-40 cursor-pointer'
+                  aria-label='Trang sau'
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </section>
+  )
 }
 
 export default function ProductDetail() {

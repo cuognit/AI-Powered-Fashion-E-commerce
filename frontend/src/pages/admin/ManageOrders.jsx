@@ -1,10 +1,11 @@
 import { Check, ChevronLeft, ChevronRight, Columns3, Eye, FilterX, List, PackageSearch, RefreshCw, Search, Truck, UserRound, Users } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import toast from 'react-hot-toast'
+import { useSearchParams } from 'react-router-dom'
 import AdminOrderDrawer from '../../components/admin/orders/AdminOrderDrawer.jsx'
 import OrderStatusBadge from '../../components/orders/OrderStatusBadge.jsx'
 import { getAdminCustomer, listAdminCustomerOrders, listAdminCustomers } from '../../services/adminCustomerApi.js'
-import { completeAdminRefund, listAdminOrders, updateAdminOrderStatus } from '../../services/orderApi.js'
+import { completeAdminRefund, getOrderDetail, listAdminOrders, updateAdminOrderStatus } from '../../services/orderApi.js'
 import { formatCurrency } from '../../utils/formatCurrency.js'
 import { formatOrderDate, orderStatusMeta, paymentStatusLabels } from '../../utils/orderStatus.js'
 
@@ -13,25 +14,25 @@ const boardStatuses = ['pending', 'processing', 'ready_to_ship', 'shipped', 'com
 const messageOf = (error) => error.response?.data?.message || 'Không thể xử lý yêu cầu'
 
 function QuickActions({ order, busy, onUpdate, onDetail }) {
-  if (order.status === 'pending') return <button disabled={busy} onClick={() => onUpdate(order, { status: 'processing', note: 'Xác nhận nhanh từ danh sách quản trị' }, 'Xác nhận chuyển đơn sang chờ xử lý?')} className='inline-flex items-center gap-1.5 bg-black px-3 py-2 text-[10px] font-black uppercase text-white disabled:opacity-40'><Check className='h-3.5 w-3.5' />Xác nhận</button>
-  if (['processing', 'ready_to_ship'].includes(order.status)) return <button disabled={busy} onClick={() => onDetail(order)} className='inline-flex items-center gap-1.5 bg-black px-3 py-2 text-[10px] font-black uppercase text-white'><Truck className='h-3.5 w-3.5' />Cập nhật</button>
+  if (order.status === 'pending') return <button disabled={busy} onClick={() => onUpdate(order, { status: 'processing', note: 'Xác nhận nhanh từ danh sách quản trị' }, 'Xác nhận chuyển đơn sang chờ xử lý?')} className='inline-flex items-center gap-1.5 bg-black px-3 py-2 text-[10px] font-black uppercase text-white disabled:opacity-40 cursor-pointer'><Check className='h-3.5 w-3.5' />Xác nhận</button>
+  if (['processing', 'ready_to_ship'].includes(order.status)) return <button disabled={busy} onClick={() => onDetail(order)} className='inline-flex items-center gap-1.5 bg-black px-3 py-2 text-[10px] font-black uppercase text-white cursor-pointer'><Truck className='h-3.5 w-3.5' />Cập nhật</button>
   if (order.status === 'shipped') return <span className='text-[10px] font-bold uppercase text-violet-700'>Chờ khách xác nhận</span>
-  return <button onClick={() => onDetail(order)} className='inline-flex items-center gap-1.5 border px-3 py-2 text-[10px] font-black uppercase'><Eye className='h-3.5 w-3.5' />Chi tiết</button>
+  return <button onClick={() => onDetail(order)} className='inline-flex items-center gap-1.5 border px-3 py-2 text-[10px] font-black uppercase cursor-pointer'><Eye className='h-3.5 w-3.5' />Chi tiết</button>
 }
 
 function OrderTable({ orders, busyCode, onUpdate, onDetail }) {
-  return <div className='overflow-x-auto'><table className='w-full min-w-[1040px] text-left text-sm'><thead className='border-b bg-neutral-50 text-[10px] font-black uppercase'><tr><th className='p-4'>Đơn hàng</th><th className='p-4'>Khách hàng</th><th className='p-4'>Sản phẩm</th><th className='p-4'>Thanh toán</th><th className='p-4'>Tổng tiền</th><th className='p-4'>Trạng thái</th><th className='p-4'>Thao tác</th></tr></thead><tbody className='divide-y'>{orders.map((order) => <tr key={order.orderCode} className='hover:bg-neutral-50'><td className='p-4'><button onClick={() => onDetail(order)} className='font-mono font-bold hover:underline'>{order.orderCode}</button><p className='text-xs text-neutral-500'>{formatOrderDate(order.createdAt, true)}</p></td><td className='p-4'><b>{order.customer?.name || 'Khách hàng'}</b><p className='max-w-44 truncate text-xs text-neutral-500'>{order.customer?.email}</p></td><td className='p-4'>{order.itemCount} sản phẩm</td><td className='p-4'><b className='text-xs'>{order.paymentMethod}</b><p className='text-xs text-neutral-500'>{paymentStatusLabels[order.paymentStatus]}</p></td><td className='p-4 font-bold'>{formatCurrency(order.totalAmount)}</td><td className='p-4'><OrderStatusBadge status={order.status} /></td><td className='p-4'><QuickActions order={order} busy={busyCode === order.orderCode} onUpdate={onUpdate} onDetail={onDetail} /></td></tr>)}</tbody></table></div>
+  return <div className='overflow-x-auto'><table className='w-full min-w-[1040px] text-left text-sm'><thead className='border-b bg-neutral-50 text-[10px] font-black uppercase'><tr><th className='p-4'>Đơn hàng</th><th className='p-4'>Khách hàng</th><th className='p-4'>Sản phẩm</th><th className='p-4'>Thanh toán</th><th className='p-4'>Tổng tiền</th><th className='p-4'>Trạng thái</th><th className='p-4'>Thao tác</th></tr></thead><tbody className='divide-y'>{orders.map((order) => <tr key={order.orderCode} className='hover:bg-neutral-50'><td className='p-4'><button onClick={() => onDetail(order)} className='font-mono font-bold hover:underline cursor-pointer'>{order.orderCode}</button><p className='text-xs text-neutral-500'>{formatOrderDate(order.createdAt, true)}</p></td><td className='p-4'><b>{order.customer?.name || 'Khách hàng'}</b><p className='max-w-44 truncate text-xs text-neutral-500'>{order.customer?.email}</p></td><td className='p-4'>{order.itemCount} sản phẩm</td><td className='p-4'><b className='text-xs'>{order.paymentMethod}</b><p className='text-xs text-neutral-500'>{paymentStatusLabels[order.paymentStatus]}</p></td><td className='p-4 font-bold'>{formatCurrency(order.totalAmount)}</td><td className='p-4'><OrderStatusBadge status={order.status} /></td><td className='p-4'><QuickActions order={order} busy={busyCode === order.orderCode} onUpdate={onUpdate} onDetail={onDetail} /></td></tr>)}</tbody></table></div>
 }
 
 function OrderBoard({ orders, busyCode, onUpdate, onDetail }) {
-  return <div className='grid gap-4 xl:grid-cols-5'>{boardStatuses.map((status) => { const items = orders.filter((order) => order.status === status); return <section key={status} className='min-w-0 bg-neutral-100 p-3'><div className='mb-3 flex items-center justify-between'><OrderStatusBadge status={status} /><b className='text-xs'>{items.length}</b></div><div className='space-y-3'>{items.map((order) => <article key={order.orderCode} className='bg-white p-4 shadow-sm'><button onClick={() => onDetail(order)} className='font-mono text-xs font-bold hover:underline'>{order.orderCode}</button><p className='mt-3 truncate text-sm font-bold'>{order.customer?.name || 'Khách hàng'}</p><p className='text-[11px] text-neutral-500'>{order.itemCount} sản phẩm · {formatOrderDate(order.createdAt)}</p><p className='mt-3 font-black'>{formatCurrency(order.totalAmount)}</p><div className='mt-4 border-t pt-3'><QuickActions order={order} busy={busyCode === order.orderCode} onUpdate={onUpdate} onDetail={onDetail} /></div></article>)}{!items.length && <div className='border border-dashed p-6 text-center text-xs text-neutral-400'>Không có đơn</div>}</div></section> })}</div>
+  return <div className='grid gap-4 xl:grid-cols-5'>{boardStatuses.map((status) => { const items = orders.filter((order) => order.status === status); return <section key={status} className='min-w-0 bg-neutral-100 p-3'><div className='mb-3 flex items-center justify-between'><OrderStatusBadge status={status} /><b className='text-xs'>{items.length}</b></div><div className='space-y-3'>{items.map((order) => <article key={order.orderCode} className='bg-white p-4 shadow-sm'><button onClick={() => onDetail(order)} className='font-mono text-xs font-bold hover:underline cursor-pointer'>{order.orderCode}</button><p className='mt-3 truncate text-sm font-bold'>{order.customer?.name || 'Khách hàng'}</p><p className='text-[11px] text-neutral-500'>{order.itemCount} sản phẩm · {formatOrderDate(order.createdAt)}</p><p className='mt-3 font-black'>{formatCurrency(order.totalAmount)}</p><div className='mt-4 border-t pt-3'><QuickActions order={order} busy={busyCode === order.orderCode} onUpdate={onUpdate} onDetail={onDetail} /></div></article>)}{!items.length && <div className='border border-dashed p-6 text-center text-xs text-neutral-400'>Không có đơn</div>}</div></section> })}</div>
 }
 
 function CustomerView({ customers, onSelect }) {
   return <div className='grid gap-4 sm:grid-cols-2 xl:grid-cols-3'>{customers.map((customer, index) => {
     const id = customer.id || customer.customerId || ''
     const displayName = String(customer.name || customer.email || 'Khách hàng')
-    return <button key={id || `customer-${index}`} disabled={!id} onClick={() => id && onSelect({ ...customer, id })} className='bg-white p-5 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60'>
+    return <button key={id || `customer-${index}`} disabled={!id} onClick={() => id && onSelect({ ...customer, id })} className='bg-white p-5 text-left shadow-sm transition hover:-translate-y-1 hover:shadow-lg disabled:cursor-not-allowed disabled:opacity-60 cursor-pointer'>
       <span className='grid h-11 w-11 place-items-center rounded-full bg-black font-black text-white'>{displayName.charAt(0).toUpperCase()}</span>
       <h3 className='mt-4 font-black'>{customer.name || 'Khách hàng chưa cập nhật tên'}</h3>
       <p className='truncate text-xs text-neutral-500'>{customer.email || 'Chưa có email'}</p>
@@ -42,6 +43,9 @@ function CustomerView({ customers, onSelect }) {
 }
 
 export default function ManageOrders() {
+  const [searchParams, setSearchParams] = useSearchParams()
+  const targetCode = searchParams.get('code') || searchParams.get('orderCode')
+
   const [rows, setRows] = useState([])
   const [pagination, setPagination] = useState({ page: 1, totalPages: 1, total: 0 })
   const [summary, setSummary] = useState({ counts: {}, total: 0, revenue: 0 })
@@ -74,7 +78,29 @@ export default function ManageOrders() {
     } catch (requestError) { setError(messageOf(requestError)) }
     finally { setLoading(false) }
   }, [customer, page, paymentMethod, paymentStatus, search, sort, status, view])
+
   useEffect(() => { load() }, [load])
+
+  // Tự động mở drawer chi tiết đơn hàng khi có param ?code= từ thông báo
+  useEffect(() => {
+    if (!targetCode) return
+    let active = true
+    const existing = rows.find((r) => r.orderCode === targetCode)
+    if (existing) {
+      setSelected(existing)
+      return
+    }
+    getOrderDetail(targetCode)
+      .then((res) => {
+        if (active && res?.data) {
+          setSelected(res.data)
+        }
+      })
+      .catch((err) => {
+        console.error('Không tìm thấy đơn hàng:', targetCode, err)
+      })
+    return () => { active = false }
+  }, [targetCode, rows])
 
   const updateOrder = async (order, payload, confirmation) => {
     if (confirmation && !window.confirm(confirmation)) return
@@ -83,10 +109,22 @@ export default function ManageOrders() {
     catch (requestError) { toast.error(messageOf(requestError)) }
     finally { setBusyCode('') }
   }
+
   const updateSelected = async (payload) => { setBusy(true); try { const result = await updateAdminOrderStatus(selected.orderCode, payload); setSelected(result); toast.success('Đã cập nhật trạng thái'); await load() } catch (requestError) { toast.error(messageOf(requestError)) } finally { setBusy(false) } }
   const completeRefund = async (payload) => { setBusy(true); try { const result = await completeAdminRefund(selected.orderCode, payload); setSelected(result); toast.success('Đã ghi nhận hoàn tiền'); await load() } catch (requestError) { toast.error(messageOf(requestError)) } finally { setBusy(false) } }
   const chooseCustomer = async (value) => { const id = value.id || value.customerId; if (!id) return toast.error('Tài khoản khách hàng thiếu mã định danh'); setLoading(true); try { setCustomer(await getAdminCustomer(id)); setView('list'); setPage(1) } catch (requestError) { toast.error(messageOf(requestError)); setLoading(false) } }
   const resetFilters = () => { setStatus(''); setPaymentStatus(''); setPaymentMethod(''); setSort('newest'); setSearchInput(''); setSearch(''); setCustomer(null); setPage(1) }
+
+  const handleCloseDrawer = () => {
+    if (busy) return
+    setSelected(null)
+    if (targetCode) {
+      const nextParams = new URLSearchParams(searchParams)
+      nextParams.delete('code')
+      nextParams.delete('orderCode')
+      setSearchParams(nextParams, { replace: true })
+    }
+  }
 
   return <section className='px-4 py-8 lg:px-8'><div className='mx-auto max-w-[1360px]'>
     <div className='flex flex-col justify-between gap-5 border-b border-black pb-6 lg:flex-row lg:items-end'><div><p className='text-xs font-bold uppercase tracking-[.25em] text-neutral-500'>Trung tâm vận hành</p><h1 className='mt-2 text-3xl font-black uppercase sm:text-5xl'>Quản lý đơn hàng</h1></div>{view !== 'customers' && <div className='flex gap-3'><div className='bg-black px-5 py-3 text-white'><p className='text-[9px] uppercase text-neutral-400'>Tổng đơn</p><b className='text-xl'>{summary.total}</b></div><div className='bg-white px-5 py-3'><p className='text-[9px] uppercase text-neutral-500'>Doanh thu đã giao</p><b>{formatCurrency(summary.revenue)}</b></div></div>}</div>
@@ -96,5 +134,5 @@ export default function ManageOrders() {
     <div className='my-5 flex items-center justify-between'><p className='text-xs font-bold'>{pagination.total} {view === 'customers' ? 'khách hàng' : 'đơn phù hợp'}</p><div className='flex border bg-white p-1'>{[['list', List, 'Danh sách'], ['board', Columns3, 'Bảng trạng thái'], ['customers', Users, 'Khách hàng']].map(([value, Icon, label]) => <button key={value} onClick={() => { setView(value); setCustomer(null); setPage(1) }} title={label} className={`grid h-8 w-9 place-items-center ${view === value ? 'bg-black text-white' : ''}`}><Icon className='h-4 w-4' /></button>)}</div></div>
     <div className={view === 'list' ? 'overflow-hidden bg-white shadow-sm' : ''}>{loading ? <div className='h-80 animate-pulse bg-neutral-100' /> : error ? <div className='bg-white p-12 text-center text-red-600'><p>{error}</p><button onClick={load} className='mt-4 bg-black px-4 py-2 text-xs text-white'>Thử lại</button></div> : !rows.length ? <div className='bg-white p-12 text-center'><PackageSearch className='mx-auto h-12 w-12 text-neutral-400' /><p className='mt-3 font-black uppercase'>Không có dữ liệu phù hợp</p></div> : view === 'customers' ? <CustomerView customers={rows} onSelect={chooseCustomer} /> : view === 'board' ? <OrderBoard orders={rows} busyCode={busyCode} onUpdate={updateOrder} onDetail={setSelected} /> : <OrderTable orders={rows} busyCode={busyCode} onUpdate={updateOrder} onDetail={setSelected} />}</div>
     {pagination.totalPages > 1 && <div className='mt-6 flex items-center justify-center gap-4'><button disabled={page <= 1} onClick={() => setPage((value) => value - 1)} className='bg-white p-2 disabled:opacity-30'><ChevronLeft /></button><span className='text-xs font-black'>Trang {page}/{pagination.totalPages}</span><button disabled={page >= pagination.totalPages} onClick={() => setPage((value) => value + 1)} className='bg-white p-2 disabled:opacity-30'><ChevronRight /></button></div>}
-  </div><AdminOrderDrawer key={selected?.orderCode || 'none'} order={selected} busy={busy} onClose={() => !busy && setSelected(null)} onUpdate={updateSelected} onRefund={completeRefund} /></section>
+  </div><AdminOrderDrawer key={selected?.orderCode || 'none'} order={selected} busy={busy} onClose={handleCloseDrawer} onUpdate={updateSelected} onRefund={completeRefund} /></section>
 }

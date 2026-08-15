@@ -10,6 +10,7 @@ import { AppError } from '../utils/AppError.js'
 import { assetUrl, selectedOptions, variantPrice } from '../utils/productVariant.js'
 import { createVnpayUrl, formatVnpayDate, verifyVnpaySignature } from '../utils/vnpay.js'
 import { queryRequestId, signQueryRequest, verifyQueryResponse } from '../utils/vnpayQuery.js'
+import { createNotification } from './notificationService.js'
 
 const SHIPPING_FEE = 25_000
 const PAYMENT_TTL_MS = 15 * 60_000
@@ -57,6 +58,9 @@ async function buildAndReserveCart(userId, checkout, session) {
 async function createOrder(userId, checkout, method, ipAddress) {
   const session = await mongoose.startSession()
   let result
+  let createdOrderId = null
+  let createdOrderCode = null
+  let createdTotal = 0
   try {
     await session.withTransaction(async () => {
       const totals = await buildAndReserveCart(userId, checkout, session)
@@ -70,6 +74,10 @@ async function createOrder(userId, checkout, method, ipAddress) {
         payment_expires_at: expiresAt, status: 'pending', items: totals.items,
         status_history: [{ event: 'order_created', actor_type: 'system', occurred_at: new Date() }],
       }], { session })
+
+      createdOrderId = order._id
+      createdOrderCode = code
+      createdTotal = totals.total
 
       if (method === 'VNPAY') {
         if (!env.vnpay.tmnCode || !env.vnpay.hashSecret) throw new AppError('VNPAY chưa được cấu hình', 503)
@@ -89,6 +97,27 @@ async function createOrder(userId, checkout, method, ipAddress) {
 
       if (method === 'COD') await Cart.deleteOne({ user_id: userId }, { session })
     })
+
+    if (createdOrderCode) {
+      createNotification({
+        recipient: userId,
+        recipientRole: 'customer',
+        title: 'Đặt hàng thành công!',
+        message: `Đơn hàng #${createdOrderCode} (${createdTotal.toLocaleString('vi-VN')}đ) đã được khởi tạo thành công.`,
+        type: 'ORDER_CREATED',
+        data: { orderId: createdOrderId, orderCode: createdOrderCode, url: '/orders' },
+      }).catch((err) => console.error('Notification error:', err.message))
+
+      createNotification({
+        recipient: null,
+        recipientRole: 'admin',
+        title: 'Đơn hàng mới!',
+        message: `Khách hàng vừa đặt đơn hàng mới #${createdOrderCode} (${createdTotal.toLocaleString('vi-VN')}đ, ${method}).`,
+        type: 'ORDER_CREATED',
+        data: { orderId: createdOrderId, orderCode: createdOrderCode, url: `/admin/orders?code=${createdOrderCode}` },
+      }).catch((err) => console.error('Notification error:', err.message))
+    }
+
     return result
   } finally { await session.endSession() }
 }
@@ -130,6 +159,7 @@ function classifyVnpayResult(responseCode, transactionStatus) {
 async function applyPaymentResult(paymentId, result, providerData = {}) {
   const session = await mongoose.startSession()
   let applied = false
+  let orderInfo = null
   try {
     await session.withTransaction(async () => {
       const payment = await PaymentTransaction.findOne({ _id: paymentId, status: { $in: ['pending', 'payment_review'] } }).session(session)
@@ -170,7 +200,46 @@ async function applyPaymentResult(paymentId, result, providerData = {}) {
       await payment.save({ session })
       await order.save({ session })
       applied = true
+      orderInfo = {
+        id: order._id,
+        code: order.order_code,
+        userId: order.user_id,
+        total: order.total_amount,
+        result,
+      }
     })
+
+    if (orderInfo) {
+      if (orderInfo.result === 'paid') {
+        createNotification({
+          recipient: orderInfo.userId,
+          recipientRole: 'customer',
+          title: 'Thanh toán thành công!',
+          message: `Đơn hàng #${orderInfo.code} đã thanh toán thành công qua VNPay (${orderInfo.total.toLocaleString('vi-VN')}đ).`,
+          type: 'PAYMENT_SUCCESS',
+          data: { orderId: orderInfo.id, orderCode: orderInfo.code, url: '/orders' },
+        }).catch((err) => console.error('Notification error:', err.message))
+
+        createNotification({
+          recipient: null,
+          recipientRole: 'admin',
+          title: 'Thanh toán VNPay thành công',
+          message: `Đơn hàng #${orderInfo.code} đã được thanh toán thành công qua VNPay.`,
+          type: 'PAYMENT_SUCCESS',
+          data: { orderId: orderInfo.id, orderCode: orderInfo.code, url: `/admin/orders?code=${orderInfo.code}` },
+        }).catch((err) => console.error('Notification error:', err.message))
+      } else if (orderInfo.result === 'failed') {
+        createNotification({
+          recipient: orderInfo.userId,
+          recipientRole: 'customer',
+          title: 'Thanh toán không thành công',
+          message: `Giao dịch thanh toán cho đơn hàng #${orderInfo.code} không thành công hoặc đã bị hủy.`,
+          type: 'PAYMENT_FAILED',
+          data: { orderId: orderInfo.id, orderCode: orderInfo.code, url: '/orders' },
+        }).catch((err) => console.error('Notification error:', err.message))
+      }
+    }
+
     return applied
   } finally { await session.endSession() }
 }

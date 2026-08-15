@@ -51,6 +51,7 @@ const router = createBrowserRouter([
           { path: '/checkout', element: <CheckoutRoute><Checkout /></CheckoutRoute> },
           { path: '/payment/result', element: <PaymentResult /> },
           { path: '/profile', element: <ProfilePage /> },
+          { path: '/profile/orders', element: <OrderHistory /> },
           { path: '/orders', element: <OrderHistory /> },
           { path: '/wishlist', element: <Wishlist /> },
           { path: '/track-order', element: <TrackOrder /> },

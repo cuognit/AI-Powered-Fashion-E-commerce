@@ -7,6 +7,7 @@ import User from '../models/User.js'
 import { AppError } from '../utils/AppError.js'
 import { getCart } from './cartService.js'
 import { allocateReorderQuantity, allowedAdminTransitions, canAdminFulfill, escapeRegex, ORDER_STATUSES, legacyStatusHistory, paymentStatusAfterReceived } from '../utils/order.js'
+import { createNotification } from './notificationService.js'
 
 const PAYMENT_STATUSES = ['pending_payment', 'payment_review', 'paid', 'failed', 'expired', 'cod_pending']
 
@@ -242,19 +243,21 @@ function summarizeAdminOrders(rows) {
 
 export async function getOrderForUser(orderCode, user) {
   const filter = { order_code: orderCode, ...(user.role !== 'admin' && { user_id: user.sub }) }
-  const order = await Order.findOne(filter).populate('items.product_id', 'images').lean()
+  const order = await Order.findOne(filter).populate('items.product_id', 'images').populate('user_id', 'name email').lean()
   if (!order) throw new AppError('Không tìm thấy đơn hàng', 404)
-  return serializeOrder(order, { detail: true })
+  return serializeOrder(order, { detail: true, admin: user.role === 'admin' })
 }
 
 export async function cancelOrder(userId, orderCode, { reasonCode, note }) {
   const session = await mongoose.startSession()
+  let targetOrderId = null
   try {
     await session.withTransaction(async () => {
       const order = await Order.findOne({ order_code: orderCode, user_id: userId }).session(session)
       if (!order) throw new AppError('Không tìm thấy đơn hàng', 404)
       if (!['pending', 'processing'].includes(order.status)) throw new AppError('Chỉ có thể hủy đơn trước khi giao hàng', 409)
 
+      targetOrderId = order._id
       order.status = 'canceled'
       order.cancel_reason = reasonCode
       order.cancellation.reason_code = reasonCode
@@ -273,6 +276,15 @@ export async function cancelOrder(userId, orderCode, { reasonCode, note }) {
       await releaseInventory(order, session)
       await order.save({ session })
     })
+
+    createNotification({
+      recipient: null,
+      recipientRole: 'admin',
+      title: 'Đơn hàng đã bị hủy',
+      message: `Khách hàng vừa hủy đơn hàng #${orderCode}.`,
+      type: 'ORDER_STATUS_UPDATED',
+      data: { orderId: targetOrderId, orderCode, url: `/admin/orders?code=${orderCode}` },
+    }).catch((err) => console.error('Notification error:', err.message))
   } finally {
     await session.endSession()
   }
@@ -323,6 +335,8 @@ export async function reorder(userId, orderCode) {
 
 export async function updateOrderStatus(adminId, orderCode, data) {
   const session = await mongoose.startSession()
+  let orderRecipientId = null
+  let targetOrderId = null
   try {
     await session.withTransaction(async () => {
       const order = await Order.findOne({ order_code: orderCode }).session(session)
@@ -334,6 +348,8 @@ export async function updateOrderStatus(adminId, orderCode, data) {
         throw new AppError('Đơn hàng chưa đủ điều kiện thanh toán để xử lý', 409)
       }
 
+      orderRecipientId = order.user_id
+      targetOrderId = order._id
       order.status = data.status
       if (data.status === 'shipped') {
         order.shipment.carrier = data.carrier
@@ -359,6 +375,24 @@ export async function updateOrderStatus(adminId, orderCode, data) {
       if (data.status === 'canceled') requestRefundIfNeeded(order, 'admin', adminId, data.note)
       await order.save({ session })
     })
+
+    if (orderRecipientId) {
+      const statusLabels = {
+        processing: 'Đang được đóng gói và chuẩn bị',
+        ready_to_ship: 'Đã sẵn sàng bàn giao cho đơn vị vận chuyển',
+        shipped: 'Đang trên đường giao đến bạn',
+        completed: 'Đã được giao thành công',
+        canceled: 'Đã bị hủy bởi ban quản trị',
+      }
+      createNotification({
+        recipient: orderRecipientId,
+        recipientRole: 'customer',
+        title: `Cập nhật đơn hàng #${orderCode}`,
+        message: `Đơn hàng #${orderCode} của bạn: ${statusLabels[data.status] || data.status}.`,
+        type: 'ORDER_STATUS_UPDATED',
+        data: { orderId: targetOrderId, orderCode, status: data.status, url: '/orders' },
+      }).catch((err) => console.error('Notification error:', err.message))
+    }
   } finally {
     await session.endSession()
   }
@@ -367,6 +401,7 @@ export async function updateOrderStatus(adminId, orderCode, data) {
 
 export async function confirmOrderReceived(userId, orderCode) {
   const session = await mongoose.startSession()
+  let targetOrderId = null
   try {
     await session.withTransaction(async () => {
       const order = await Order.findOne({ order_code: orderCode, user_id: userId }).session(session)
@@ -375,6 +410,7 @@ export async function confirmOrderReceived(userId, orderCode) {
         throw new AppError(order.status === 'completed' ? 'Đơn hàng đã được xác nhận nhận hàng' : 'Chỉ có thể xác nhận đơn đang giao', 409)
       }
 
+      targetOrderId = order._id
       const now = new Date()
       order.status = 'completed'
       order.shipment.delivered_at = now
@@ -382,6 +418,24 @@ export async function confirmOrderReceived(userId, orderCode) {
       appendEvent(order, 'completed', 'customer', userId, 'Khách hàng xác nhận đã nhận hàng', now)
       await order.save({ session })
     })
+
+    createNotification({
+      recipient: userId,
+      recipientRole: 'customer',
+      title: 'Kiện hàng giao thành công!',
+      message: `Đơn hàng #${orderCode} đã được giao thành công. Cảm ơn bạn đã mua sắm tại AESTHETIX! Bạn có thể chia sẻ đánh giá về sản phẩm bất cứ lúc nào.`,
+      type: 'ORDER_STATUS_UPDATED',
+      data: { orderId: targetOrderId, orderCode, status: 'completed', url: '/orders' },
+    }).catch((err) => console.error('Notification error:', err.message))
+
+    createNotification({
+      recipient: null,
+      recipientRole: 'admin',
+      title: 'Đơn hàng đã hoàn thành',
+      message: `Khách hàng đã xác nhận nhận hàng thành công cho đơn #${orderCode}.`,
+      type: 'ORDER_STATUS_UPDATED',
+      data: { orderId: targetOrderId, orderCode, url: `/admin/orders?code=${orderCode}` },
+    }).catch((err) => console.error('Notification error:', err.message))
   } finally {
     await session.endSession()
   }

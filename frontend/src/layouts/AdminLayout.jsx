@@ -3,6 +3,7 @@ import { ExternalLink, LogOut, Menu, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import AdminSidebar from '../components/admin/AdminSidebar.jsx'
+import NotificationBell from '../components/common/NotificationBell.jsx'
 import useAuth from '../hooks/useAuth.js'
 
 const pageTitles = {
@@ -80,6 +81,9 @@ export default function AdminLayout() {
             <Link to='/' className='hidden h-10 items-center gap-2 border border-neutral-300 bg-white px-4 text-[10px] font-bold uppercase tracking-[0.1em] transition hover:border-black sm:flex'>
               Về cửa hàng <ExternalLink className='h-3.5 w-3.5' />
             </Link>
+
+            <NotificationBell isAdmin={true} />
+
             <div className='hidden border-l border-neutral-300 pl-4 md:block'>
               <p className='max-w-40 truncate text-xs font-bold'>{user?.name || 'Quản trị viên'}</p>
               <p className='max-w-40 truncate text-[10px] text-neutral-500'>{user?.email || 'Administrator'}</p>

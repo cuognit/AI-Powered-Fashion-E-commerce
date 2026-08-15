@@ -5,6 +5,7 @@ import { motion } from 'framer-motion'
 import useAuth from '../hooks/useAuth'
 import useCartStore from '../store/cartStore'
 import UserDropdown from './UserDropdown'
+import NotificationBell from './common/NotificationBell.jsx'
 
 export default function Header() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
@@ -135,6 +136,9 @@ export default function Header() {
               className="pl-6 pr-2 py-1 text-[11px] sm:text-xs font-semibold tracking-widest text-gray-900 placeholder:text-gray-400 uppercase bg-transparent border-b border-gray-300 focus:border-black focus:outline-none w-36 md:w-52 lg:w-64 transition-all duration-200"
             />
           </form>
+
+          {/* Notification Bell */}
+          <NotificationBell />
 
           {/* Cart Icon */}
           <Link
