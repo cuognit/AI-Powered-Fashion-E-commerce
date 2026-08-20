@@ -4,7 +4,7 @@ import { Sparkles, ArrowRight, Minus, Plus, Trash2 } from 'lucide-react'
 import toast from 'react-hot-toast'
 import useCartStore from '../../store/cartStore'
 import { formatCurrency } from '../../utils/formatCurrency.js'
-import { AIStylistChatModal } from '../../components/CartModals'
+import { openFashionChat } from '../../hooks/useChatStream.js'
 
 export default function Cart() {
   const navigate = useNavigate()
@@ -19,8 +19,6 @@ export default function Cart() {
     shippingDetails,
     setShippingDetails,
   } = useCartStore()
-
-  const [isStylistModalOpen, setIsStylistModalOpen] = useState(false)
 
   const subtotal = getSubtotal()
   const total = getTotal()
@@ -220,7 +218,7 @@ export default function Cart() {
 
           {/* Need Assistance Card */}
           <div
-            onClick={() => setIsStylistModalOpen(true)}
+            onClick={() => openFashionChat()}
             className="bg-white p-5 rounded-xs border border-gray-200/80 hover:border-black transition cursor-pointer shadow-2xs flex items-center justify-between group"
           >
             <div>
@@ -237,12 +235,6 @@ export default function Cart() {
         </div>
 
       </div>
-
-      {/* Modals */}
-      <AIStylistChatModal
-        isOpen={isStylistModalOpen}
-        onClose={() => setIsStylistModalOpen(false)}
-      />
     </div>
   )
 }

@@ -1,6 +1,7 @@
 import Product from '../models/product.model.js'
 import { getTextEmbedding } from '../services/ai.service.js'
 import { buildCatalogFilter, CatalogQueryError, escapeRegex, metaFor, parseCatalogQuery } from '../utils/catalogQuery.js'
+import { attachStatsToProducts } from '../services/productStats.service.js'
 
 const suggestions = ['Áo chống nắng UPF 50+', 'Đồ bơi đi biển', 'Áo sơ mi lụa công sở', 'Set đồ tập gym yoga', 'Đầm dạ tiệc cao cấp', 'Áo thun streetwear unisex']
 const normalized = (value) => String(value || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase()
@@ -28,6 +29,8 @@ function sortResults(items, sort) {
   if (sort === 'price_asc') return items.sort((a, b) => price(a) - price(b))
   if (sort === 'price_desc') return items.sort((a, b) => price(b) - price(a))
   if (sort === 'name') return items.sort((a, b) => a.name.localeCompare(b.name, 'vi'))
+  if (sort === 'best_selling') return items.sort((a, b) => (b.sold_count ?? 0) - (a.sold_count ?? 0))
+  if (sort === 'rating_desc') return items.sort((a, b) => (b.average_rating ?? 0) - (a.average_rating ?? 0))
   return items.sort((a, b) => b.score - a.score)
 }
 
@@ -42,29 +45,72 @@ export async function searchCatalog(req, res) {
     const query = String(req.query.q || req.query.query || '').trim()
     if (query.length > 200) throw new CatalogQueryError('Từ khóa tìm kiếm quá dài')
     const filter = await buildCatalogFilter(parsed)
+    let geminiQueryVector = null
     let queryVector = null
-    if (query) queryVector = await getTextEmbedding(query)
 
-    const hasVector = Array.isArray(queryVector) && queryVector.length > 0
-    const vectorFilter = hasVector ? { ...filter, embedding_vector: { $exists: true, $ne: [] } } : null
-    let products = hasVector ? await Product.find(vectorFilter).populate('category_id', 'name slug').lean() : []
+    if (query) {
+      try {
+        const { embedSearchQuery } = await import('../services/geminiEmbedding.service.js')
+        geminiQueryVector = await embedSearchQuery(query)
+      } catch {
+        // Fallback
+      }
+      if (!geminiQueryVector) {
+        try {
+          queryVector = await getTextEmbedding(query)
+        } catch {
+          // Fallback
+        }
+      }
+    }
+
+    const hasGemini = Array.isArray(geminiQueryVector) && geminiQueryVector.length === 768
+    const hasLegacy = Array.isArray(queryVector) && queryVector.length === 384
+    let products = []
     let searchMode = 'semantic'
 
-    if (!hasVector || products.length === 0) {
+    if (hasGemini) {
+      const gFilter = { ...filter, gemini_embedding_vector: { $exists: true, $ne: [] } }
+      products = await Product.find(gFilter).populate('category_id', 'name slug').lean()
+      if (products.length > 0) {
+        products = products.map((product) => ({
+          ...product,
+          score: Math.max(0, Math.min(1, cosine(geminiQueryVector, product.gemini_embedding_vector) * 0.8 + lexicalScore(product, query) * 0.2)),
+        }))
+        if (query) products = products.filter((product) => product.score >= 0.25)
+      }
+    }
+
+    if ((!hasGemini || products.length === 0) && hasLegacy) {
+      const lFilter = { ...filter, embedding_vector: { $exists: true, $ne: [] } }
+      products = await Product.find(lFilter).populate('category_id', 'name slug').lean()
+      if (products.length > 0) {
+        products = products.map((product) => ({
+          ...product,
+          score: Math.max(0, Math.min(1, cosine(queryVector, product.embedding_vector) * 0.8 + lexicalScore(product, query) * 0.2)),
+        }))
+        if (query) products = products.filter((product) => product.score >= 0.25)
+      }
+    }
+
+    if (products.length === 0) {
       searchMode = 'keyword_fallback'
       const terms = query.split(/\s+/).filter(Boolean).slice(0, 12).map((term) => new RegExp(escapeRegex(term), 'i'))
       const keywordFilter = terms.length ? { ...filter, $or: terms.flatMap((term) => [{ name: term }, { brand: term }, { description: term }]) } : filter
       products = await Product.find(keywordFilter).populate('category_id', 'name slug').lean()
       products = products.map((product) => ({ ...product, score: lexicalScore(product, query) })).filter((product) => !query || product.score > 0)
-    } else {
-      products = products.map((product) => ({ ...product, score: Math.max(0, Math.min(1, cosine(queryVector, product.embedding_vector) * 0.8 + lexicalScore(product, query) * 0.2)) }))
-      if (query) products = products.filter((product) => product.score >= 0.25)
     }
 
     products = products.map(withPriceRange)
+    if (parsed.sort === 'best_selling' || parsed.sort === 'rating_desc') {
+      products = await attachStatsToProducts(products)
+    }
     sortResults(products, parsed.sort)
     const total = products.length
-    const data = products.slice(parsed.skip, parsed.skip + parsed.limit)
+    const paginated = products.slice(parsed.skip, parsed.skip + parsed.limit)
+    const data = (parsed.sort === 'best_selling' || parsed.sort === 'rating_desc')
+      ? paginated
+      : await attachStatsToProducts(paginated)
     res.json({ success: true, search_mode: query ? searchMode : null, data, meta: { ...metaFor(total, parsed), query, suggestions } })
   } catch (error) {
     res.status(error instanceof CatalogQueryError ? 400 : 500).json({ success: false, message: error.message })

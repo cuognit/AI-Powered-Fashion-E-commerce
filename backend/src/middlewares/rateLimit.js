@@ -29,3 +29,13 @@ export const orderReadRateLimit = createRateLimit({ windowMs: 60_000, limit: 30,
 export const orderMutationRateLimit = createRateLimit({ windowMs: 15 * 60_000, limit: 20, key: (r) => `order-action:${r.user?.sub}:${r.ip}` })
 export const ipnRateLimit = createRateLimit({ windowMs: 60_000, limit: 300, key: (r) => `ipn:${r.ip}` })
 export const loginIpRateLimit = createRateLimit({ windowMs: 60_000, limit: 10, key: (r) => `login-ip:${r.ip}` })
+
+export const chatGuestRateLimit = createRateLimit({ windowMs: 60_000, limit: 10, key: (r) => `chat:guest:${r.ip}` })
+export const chatAuthRateLimit = createRateLimit({ windowMs: 60_000, limit: 20, key: (r) => `chat:user:${r.user?.sub}:${r.ip}` })
+
+export function chatRateLimit(request, response, next) {
+  if (request.user?.sub) {
+    return chatAuthRateLimit(request, response, next)
+  }
+  return chatGuestRateLimit(request, response, next)
+}

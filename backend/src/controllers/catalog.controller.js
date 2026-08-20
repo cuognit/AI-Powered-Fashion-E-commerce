@@ -2,6 +2,7 @@ import Product from '../models/product.model.js'
 import Brand from '../models/Brand.js'
 import Attribute from '../models/Attribute.js'
 import { ACTIVE_PRODUCT_FILTER, buildCatalogFilter, CatalogQueryError, metaFor, mongoSort, parseCatalogQuery } from '../utils/catalogQuery.js'
+import { attachStatsToProducts } from '../services/productStats.service.js'
 
 const fail = (res, error) => res.status(error instanceof CatalogQueryError ? 400 : 500).json({ success: false, message: error.message })
 
@@ -17,6 +18,47 @@ export async function getCatalogProducts(req, res) {
         { $match: filter },
         { $addFields: { available_prices: { $map: { input: { $filter: { input: '$variants', as: 'v', cond: { $gt: ['$$v.stock', 0] } } }, as: 'v', in: { $ifNull: ['$$v.sale_price', { $ifNull: ['$$v.base_price', { $ifNull: ['$sale_price', '$base_price'] }] }] } } } } },
         { $addFields: { effective_price: { $ifNull: [{ $min: '$available_prices' }, { $ifNull: ['$sale_price', '$base_price'] }] }, maximum_price: { $ifNull: [{ $max: '$available_prices' }, { $ifNull: ['$sale_price', '$base_price'] }] } } },
+        ...(parsed.sort === 'best_selling' ? [
+          {
+            $lookup: {
+              from: 'orders',
+              let: { prodId: '$_id' },
+              pipeline: [
+                { $match: { status: { $ne: 'canceled' } } },
+                { $unwind: '$items' },
+                { $match: { $expr: { $eq: ['$items.product_id', '$$prodId'] } } },
+                { $group: { _id: null, totalSold: { $sum: '$items.quantity' } } },
+              ],
+              as: '_sold_stat',
+            },
+          },
+          {
+            $addFields: {
+              sold_count: { $ifNull: [{ $arrayElemAt: ['$_sold_stat.totalSold', 0] }, 0] },
+            },
+          },
+          { $unset: ['_sold_stat'] },
+        ] : []),
+        ...(parsed.sort === 'rating_desc' ? [
+          {
+            $lookup: {
+              from: 'reviews',
+              let: { prodId: '$_id' },
+              pipeline: [
+                { $match: { $expr: { $eq: ['$productId', '$$prodId'] } } },
+                { $group: { _id: null, avgRating: { $avg: '$rating' }, count: { $sum: 1 } } },
+              ],
+              as: '_review_stat',
+            },
+          },
+          {
+            $addFields: {
+              average_rating: { $ifNull: [{ $arrayElemAt: ['$_review_stat.avgRating', 0] }, 0] },
+              reviews_count: { $ifNull: [{ $arrayElemAt: ['$_review_stat.count', 0] }, 0] },
+            },
+          },
+          { $unset: ['_review_stat'] },
+        ] : []),
         { $sort: sort },
         { $skip: parsed.skip },
         { $limit: parsed.limit },
@@ -28,7 +70,8 @@ export async function getCatalogProducts(req, res) {
       ]).collation({ locale: 'vi', strength: 1 }),
       Product.countDocuments(filter),
     ])
-    res.json({ success: true, data: products, meta: metaFor(total, parsed) })
+    const enrichedProducts = await attachStatsToProducts(products)
+    res.json({ success: true, data: enrichedProducts, meta: metaFor(total, parsed) })
   } catch (error) { fail(res, error) }
 }
 

@@ -7,6 +7,11 @@ import Category from "../models/Category.js";
 import Product from "../models/product.model.js";
 import WishlistItem from "../models/WishlistItem.js";
 import { buildProductEmbeddingText, getTextEmbedding } from "./ai.service.js";
+import {
+  embedProductDocument as embedGeminiDocument,
+  calculateContentHash as calculateGeminiHash,
+  buildProductEmbeddingText as buildGeminiEmbeddingText,
+} from "./geminiEmbedding.service.js";
 import { AppError } from "../utils/AppError.js";
 
 const escapeRegex = (value) =>
@@ -511,8 +516,29 @@ export async function createProduct(body, filesOrAdminId, maybeAdminId) {
       created_by: adminId,
       updated_by: adminId,
     });
-    const vector = await getTextEmbedding(buildProductEmbeddingText(product));
-    if (vector?.length === 384) product.embedding_vector = vector;
+
+    const geminiText = buildGeminiEmbeddingText(product);
+    const contentHash = calculateGeminiHash(geminiText);
+    product.embedding_content_hash = contentHash;
+
+    try {
+      const geminiVector = await embedGeminiDocument(geminiText);
+      if (Array.isArray(geminiVector) && geminiVector.length === 768) {
+        product.gemini_embedding_vector = geminiVector;
+        product.embedding_model = 'gemini-embedding-2';
+        product.embedding_dimension = 768;
+        product.embedding_status = 'ready';
+        product.embedding_updated_at = new Date();
+      } else {
+        product.gemini_embedding_vector = [];
+        product.embedding_status = 'failed';
+      }
+    } catch (embedErr) {
+      product.gemini_embedding_vector = [];
+      product.embedding_status = 'failed';
+      console.warn(`[adminProductService] Không thể sinh Gemini embedding khi tạo sản phẩm: ${embedErr.message}`);
+    }
+
     await product.save();
     return serialize(product);
   } catch (error) {
@@ -545,8 +571,31 @@ export async function updateProduct(id, body, filesOrAdminId, maybeAdminId) {
     const assets = mergeImages(payload, baseAssets, fresh);
     applyMedia(payload, data, assets);
     product.set({ ...data, image_assets: assets, updated_by: adminId });
-    const vector = await getTextEmbedding(buildProductEmbeddingText(product));
-    if (vector?.length === 384) product.embedding_vector = vector;
+
+    const geminiText = buildGeminiEmbeddingText(product);
+    const contentHash = calculateGeminiHash(geminiText);
+
+    if (product.embedding_content_hash !== contentHash || product.embedding_status !== 'ready') {
+      product.embedding_content_hash = contentHash;
+      try {
+        const geminiVector = await embedGeminiDocument(geminiText);
+        if (Array.isArray(geminiVector) && geminiVector.length === 768) {
+          product.gemini_embedding_vector = geminiVector;
+          product.embedding_model = 'gemini-embedding-2';
+          product.embedding_dimension = 768;
+          product.embedding_status = 'ready';
+          product.embedding_updated_at = new Date();
+        } else {
+          product.gemini_embedding_vector = [];
+          product.embedding_status = 'failed';
+        }
+      } catch (embedErr) {
+        product.gemini_embedding_vector = [];
+        product.embedding_status = 'failed';
+        console.warn(`[adminProductService] Không thể sinh Gemini embedding khi sửa sản phẩm ${id}: ${embedErr.message}`);
+      }
+    }
+
     await product.save();
 
     const retainedUrls = new Set(assets.map((asset) => asset.url));

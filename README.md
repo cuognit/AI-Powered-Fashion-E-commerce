@@ -40,6 +40,12 @@
 - **Giỏ hàng & Wishlist:** Đồng bộ giỏ hàng thời gian thực, lưu trữ sản phẩm yêu thích (Wishlist).
 - **Thanh toán tích hợp VNPay & COD:** Hỗ trợ thanh toán cổng VNPAY (sandbox, checksum an toàn, IPN xác thực) và thanh toán khi nhận hàng (COD).
 - **Theo dõi đơn hàng & Hồ sơ cá nhân:** Quản lý lịch sử đơn hàng, cập nhật thông tin cá nhân, địa chỉ nhận hàng và theo dõi trạng thái vận chuyển thời gian thực.
+- **Trợ lý Chatbot AI RAG (Google Gemini + SSE):**
+  - Chatbot tư vấn phong cách thời trang, gợi ý sản phẩm dựa trên catalog thực tế và hỗ trợ tra cứu đơn hàng theo thời gian thực.
+  - Phản hồi dạng luồng (Server-Sent Events - SSE) hiển thị từng token mượt mà.
+  - Cơ chế xoay vòng 5 API Key Google Gemini (Round-robin, auto-cooldown on 429/5xx, secret masking).
+  - Tích hợp Vector Embedding đa ngữ 768 chiều (`gemini-embedding-2`) và Atlas Vector Search.
+  - Lưu lịch sử hội thoại cho user và hỗ trợ phiên làm việc cho khách vãng lai.
 - **AI Virtual Try-On (Thử đồ ảo AI):** Khám phá tính năng thử trang phục thông minh tăng tỷ lệ chuyển đổi mua hàng.
 
 ---
@@ -217,6 +223,11 @@ npm run dev
 | `MONGODB_URI` | Chuỗi kết nối MongoDB | `mongodb://localhost:27017/fashion?replicaSet=rs0` |
 | `JWT_ACCESS_SECRET` | Khóa bí mật ký Access Token | `secret_access_key` |
 | `JWT_REFRESH_SECRET` | Khóa bí mật ký Refresh Token | `secret_refresh_key` |
+| `GEMINI_API_KEY_1` .. `5` | 5 API Key Google Gemini (Key Pool) | `AIzaSy...` |
+| `GEMINI_MODEL` | Model tạo câu trả lời | `gemini-3.7-flash` |
+| `GEMINI_EMBEDDING_MODEL` | Model Vector Embeddings | `gemini-embedding-2` |
+| `GEMINI_EMBEDDING_DIMENSION`| Chiều dài Vector Embedding | `768` |
+| `ATLAS_GEMINI_VECTOR_INDEX_NAME` | Tên Vector Index trên Atlas | `gemini_vector_index` |
 | `VNPAY_TMN_CODE` | Mã website tại hệ thống VNPAY | `VNPAY_SANDBOX_CODE` |
 | `VNPAY_HASH_SECRET` | Chuỗi bí mật tạo checksum VNPAY | `VNPAY_HASH_SECRET_KEY` |
 | `VNPAY_RETURN_URL` | URL xử lý kết quả thanh toán trả về | `http://localhost:3000/api/payments/vnpay/return` |
@@ -227,6 +238,12 @@ npm run dev
 
 <details>
 <summary><b>🔹 Xem danh sách API Routes chi tiết</b></summary>
+
+### 🤖 AI Chatbot & RAG
+- `POST /api/chat/stream` - SSE stream phản hồi của Gemini RAG Chatbot (Hỗ trợ cả Guest & User)
+- `GET /api/chat/conversations` - Danh sách các cuộc trò chuyện của User
+- `GET /api/chat/conversations/:id/messages` - Lịch sử tin nhắn của cuộc trò chuyện
+- `DELETE /api/chat/conversations/:id` - Xóa/lưu trữ cuộc trò chuyện
 
 ### 🔑 Authentication
 - `POST /api/auth/register` - Đăng ký tài khoản mới

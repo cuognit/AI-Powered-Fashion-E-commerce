@@ -1,10 +1,10 @@
-import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Minus, Plus, ShoppingBag, Star } from 'lucide-react'
+import { ArrowLeft, ArrowRight, ChevronLeft, ChevronRight, Lightbulb, Minus, Plus, ShoppingBag, Sparkles, Star, ThumbsDown, ThumbsUp } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import FavoriteButton from '../../components/FavoriteButton.jsx'
 import { getProductById } from '../../services/productApi.js'
-import { addReview, deleteReview, getReviewEligibility, getReviewsByProduct, updateReview } from '../../services/reviewApi.js'
+import { addReview, deleteReview, getReviewAiSummary, getReviewEligibility, getReviewsByProduct, updateReview } from '../../services/reviewApi.js'
 import useAuth from '../../hooks/useAuth.js'
 import useCartStore from '../../store/cartStore.js'
 
@@ -22,6 +22,8 @@ function ReviewSection({ productId }) {
   const sectionRef = useRef(null)
   const requestedSku = searchParams.get('reviewSku') || ''
   const [reviewData, setReviewData] = useState({ reviews: [], summary: { count: 0, average: 0, distribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 } } })
+  const [aiSummary, setAiSummary] = useState(null)
+  const [loadingAiSummary, setLoadingAiSummary] = useState(false)
   const [eligibleVariants, setEligibleVariants] = useState([])
   const [selectedReviewSku, setSelectedReviewSku] = useState('')
   const [editingReview, setEditingReview] = useState(null)
@@ -34,6 +36,20 @@ function ReviewSection({ productId }) {
   const loadReviews = async () => {
     const { data } = await getReviewsByProduct(productId)
     setReviewData(data.data || data)
+  }
+
+  const loadAiSummary = async () => {
+    try {
+      setLoadingAiSummary(true)
+      const { data } = await getReviewAiSummary(productId)
+      if (data?.data) {
+        setAiSummary(data.data)
+      }
+    } catch {
+      // Bỏ qua lỗi AI summary một cách an toàn
+    } finally {
+      setLoadingAiSummary(false)
+    }
   }
 
   const loadEligibility = async (focusSku = '') => {
@@ -55,7 +71,10 @@ function ReviewSection({ productId }) {
     }
   }
 
-  useEffect(() => { loadReviews().catch(() => {}) }, [productId])
+  useEffect(() => {
+    loadReviews().catch(() => {})
+    loadAiSummary().catch(() => {})
+  }, [productId])
   useEffect(() => { loadEligibility(requestedSku).catch(() => setEligibleVariants([])) }, [productId, isAuthenticated, requestedSku])
   useEffect(() => { if (requestedSku && sectionRef.current) sectionRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' }) }, [requestedSku])
 
@@ -88,6 +107,7 @@ function ReviewSection({ productId }) {
       cancelEdit()
       await loadReviews()
       await loadEligibility()
+      loadAiSummary().catch(() => {})
     } catch (error) {
       toast.error(error.response?.data?.message || 'Không thể lưu đánh giá')
     } finally {
@@ -104,6 +124,7 @@ function ReviewSection({ productId }) {
       cancelEdit()
       await loadReviews()
       await loadEligibility()
+      loadAiSummary().catch(() => {})
     } catch (error) {
       toast.error(error.response?.data?.message || 'Không thể xóa đánh giá')
     } finally {
@@ -135,9 +156,7 @@ function ReviewSection({ productId }) {
       </div>
 
       <div className='grid gap-10 lg:grid-cols-[1fr_1.35fr] items-start'>
-        {/* Cột Trái: Biểu đồ sao + Khối "Đánh giá của bạn" ngay bên dưới */}
         <div className='space-y-6'>
-          {/* Biểu đồ phân bổ sao */}
           <div className='space-y-3 bg-zinc-50/70 p-5 rounded-xl border border-zinc-200/80'>
             {[5, 4, 3, 2, 1].map((star) => (
               <div key={star} className='flex items-center gap-3 text-sm'>
@@ -153,7 +172,6 @@ function ReviewSection({ productId }) {
             ))}
           </div>
 
-          {/* Khối "Đánh giá của bạn" & "Chia sẻ trải nghiệm" đặt ngay dưới biểu đồ */}
           <div className='border border-zinc-200 bg-white p-5 rounded-xl shadow-xs'>
             <h3 className='text-sm font-black uppercase tracking-wider text-black'>
               {editingReview ? 'Sửa đánh giá của bạn' : myVariants.length ? 'Đánh giá của bạn' : 'Chia sẻ trải nghiệm'}
@@ -165,46 +183,47 @@ function ReviewSection({ productId }) {
               </p>
             ) : (
               <>
-                {/* Danh sách các đánh giá đã viết của user (Hiển thị đầy đủ sao, ngày giờ, nội dung) */}
                 {myVariants.length > 0 && (
                   <div className='mt-4 space-y-3.5'>
                     {myVariants.map((variant) => (
-                      <div key={variant.variantSku} className='rounded-lg bg-zinc-50/80 p-3.5 border border-zinc-200/70 space-y-2'>
-                        <div className='flex items-start justify-between gap-2'>
-                          <div className='min-w-0'>
-                            <p className='text-xs font-bold text-zinc-900 truncate'>
-                              {variantLabel(variant) || variant.variantSku}
-                            </p>
-                            <div className='mt-1 flex items-center gap-2'>
-                              <Stars value={variant.review.rating} />
-                              <time className='text-[11px] text-zinc-400 font-medium'>
-                                {formatDate(variant.review.createdAt || variant.review.updatedAt)}
-                              </time>
-                            </div>
+                      <div key={variant.variantSku} className='rounded-lg border border-zinc-200 bg-zinc-50/50 p-3.5 text-xs'>
+                        <div className='flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200/60 pb-2'>
+                          <span className='font-semibold text-zinc-700'>
+                            {variantLabel(variant) || `SKU: ${variant.variantSku}`}
+                          </span>
+                          <div className='flex items-center gap-2'>
+                            <Stars value={variant.review.rating} />
+                            <span className='text-[10px] text-zinc-400 font-medium'>
+                              {formatDate(variant.review.createdAt || variant.review.updatedAt)}
+                            </span>
                           </div>
-                          <div className='flex shrink-0 items-center gap-2'>
+                        </div>
+
+                        <div className='mt-2.5 flex items-center justify-between gap-2'>
+                          <span className='rounded bg-emerald-100 px-2 py-0.5 text-[10px] font-bold text-emerald-800 uppercase tracking-wider'>
+                            Đã đánh giá
+                          </span>
+                          <div className='flex items-center gap-2'>
                             <button
                               type='button'
+                              className='font-bold text-black underline hover:text-amber-600 cursor-pointer'
                               onClick={() => beginEdit(variant)}
-                              className='text-xs font-bold text-black underline hover:text-amber-600 transition cursor-pointer'
                             >
                               Sửa
                             </button>
                             <button
                               type='button'
-                              disabled={submitting}
+                              className='font-bold text-red-600 underline hover:text-red-700 cursor-pointer'
                               onClick={() => remove(variant.review)}
-                              className='text-xs font-bold text-red-600 underline hover:text-red-800 disabled:opacity-50 transition cursor-pointer'
                             >
                               Xóa
                             </button>
                           </div>
                         </div>
 
-                        {/* Nội dung đánh giá */}
                         {variant.review.content && (
-                          <p className='text-xs text-zinc-700 leading-relaxed font-normal bg-white p-2.5 rounded border border-zinc-100'>
-                            {variant.review.content}
+                          <p className='mt-2 text-zinc-700 italic border-l-2 border-amber-400 pl-2 leading-relaxed'>
+                            "{variant.review.content}"
                           </p>
                         )}
                       </div>
@@ -212,11 +231,10 @@ function ReviewSection({ productId }) {
                   </div>
                 )}
 
-                {/* Form viết đánh giá mới hoặc sửa đánh giá */}
                 {(editingReview || newVariants.length > 0) ? (
-                  <form onSubmit={submit} className='mt-5 space-y-4 border-t border-zinc-100 pt-4'>
-                    <label className='block text-xs font-bold text-zinc-800'>
-                      Biến thể đánh giá
+                  <form onSubmit={submit} className='mt-4 space-y-3.5 border-t border-zinc-100 pt-3.5'>
+                    <div>
+                      <label className='block text-xs font-semibold text-zinc-700'>Chọn biến thể bạn đã mua</label>
                       <select
                         disabled={Boolean(editingReview)}
                         value={selectedReviewSku}
@@ -224,48 +242,49 @@ function ReviewSection({ productId }) {
                           setSelectedReviewSku(event.target.value)
                           setEditingReview(null)
                         }}
-                        className='mt-1.5 h-10 w-full rounded-lg border border-zinc-300 bg-white px-3 text-xs font-normal focus:border-black focus:outline-none'
+                        className='mt-1.5 w-full rounded-lg border border-zinc-300 bg-white px-3 py-2 text-xs text-zinc-800 focus:border-black focus:outline-hidden disabled:bg-zinc-100'
                       >
                         {(editingReview ? eligibleVariants.filter((variant) => variant.variantSku === selectedReviewSku) : newVariants).map((variant) => (
                           <option key={variant.variantSku} value={variant.variantSku}>
-                            {variantLabel(variant) || variant.variantSku}
+                            {variantLabel(variant) || `SKU: ${variant.variantSku}`}
                           </option>
                         ))}
                       </select>
-                    </label>
+                    </div>
 
                     <div>
-                      <p className='text-xs font-bold text-zinc-800'>Mức độ hài lòng</p>
-                      <div className='mt-2'>
+                      <label className='block text-xs font-semibold text-zinc-700'>Chất lượng sản phẩm</label>
+                      <div className='mt-1.5'>
                         <Stars value={rating} interactive onChange={setRating} />
                       </div>
                     </div>
 
-                    <label className='block text-xs font-bold text-zinc-800'>
-                      Nội dung đánh giá
+                    <div>
+                      <label className='block text-xs font-semibold text-zinc-700'>Nội dung đánh giá</label>
                       <textarea
-                        value={content}
-                        maxLength={1000}
-                        onChange={(event) => setContent(event.target.value)}
                         rows={3}
-                        className='mt-1.5 w-full rounded-lg border border-zinc-300 p-3 text-xs font-normal outline-none focus:border-black'
-                        placeholder='Chia sẻ cảm nhận chi tiết của bạn về sản phẩm...'
+                        maxLength={1000}
+                        value={content}
+                        onChange={(event) => setContent(event.target.value)}
+                        placeholder='Chia sẻ cảm nhận về chất liệu, độ vừa vặn, form dáng...'
+                        className='mt-1.5 w-full rounded-lg border border-zinc-300 p-2.5 text-xs text-zinc-800 focus:border-black focus:outline-hidden'
                       />
-                    </label>
+                    </div>
 
-                    <div className='flex items-center justify-between gap-2 pt-1'>
-                      <span className='text-[10px] text-zinc-400 font-medium'>{content.length}/1000 ký tự</span>
-                      <div className='flex gap-2'>
-                        {editingReview && (
-                          <button
-                            type='button'
-                            onClick={cancelEdit}
-                            className='rounded-lg border border-zinc-300 px-3.5 py-2 text-xs font-bold uppercase transition hover:bg-zinc-100 cursor-pointer'
-                          >
-                            Hủy
-                          </button>
-                        )}
+                    <div className='flex items-center justify-between pt-1'>
+                      {editingReview ? (
                         <button
+                          type='button'
+                          onClick={cancelEdit}
+                          className='text-xs font-bold text-zinc-600 underline hover:text-black cursor-pointer'
+                        >
+                          Hủy sửa
+                        </button>
+                      ) : <span />}
+
+                      <div className='flex gap-2'>
+                        <button
+                          type='submit'
                           disabled={submitting}
                           className='rounded-lg bg-black px-4 py-2 text-xs font-bold uppercase tracking-wider text-white transition hover:bg-zinc-800 active:scale-95 disabled:opacity-50 cursor-pointer'
                         >
@@ -284,8 +303,105 @@ function ReviewSection({ productId }) {
           </div>
         </div>
 
-        {/* Cột Phải: Danh sách đánh giá cộng đồng + Phân trang */}
         <div className='space-y-6'>
+          {/* Trạng thái đang phân tích đánh giá bởi AI */}
+          {loadingAiSummary && (
+            <div className='rounded-2xl border border-amber-200/80 bg-gradient-to-r from-amber-50/90 via-orange-50/50 to-amber-50/90 p-4.5 shadow-xs animate-pulse'>
+              <div className='flex items-center gap-3'>
+                <div className='grid h-8 w-8 shrink-0 place-items-center rounded-xl bg-amber-500 text-white shadow-xs'>
+                  <Sparkles size={16} className='animate-spin' />
+                </div>
+                <div className='space-y-0.5'>
+                  <h4 className='text-xs font-black uppercase tracking-wider text-amber-950 flex items-center gap-2'>
+                    <span>Fashion AI đang phân tích đánh giá...</span>
+                    <span className='inline-block h-2 w-2 rounded-full bg-amber-500 animate-ping' />
+                  </h4>
+                  <p className='text-[11px] text-amber-800/80'>Đang tổng hợp ưu nhược điểm, độ vừa vặn và lời khuyên chọn size từ khách hàng thực tế</p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Khối AI Tóm tắt Đánh giá Thực tế */}
+          {!loadingAiSummary && aiSummary?.hasSummary && (
+            <div className='rounded-2xl border border-amber-200/90 bg-gradient-to-br from-amber-50/70 via-orange-50/40 to-white p-5 shadow-xs transition-all'>
+              <div className='flex items-center justify-between gap-2 border-b border-amber-200/60 pb-3'>
+                <div className='flex items-center gap-2'>
+                  <div className='grid h-7 w-7 place-items-center rounded-lg bg-amber-500 text-white shadow-xs'>
+                    <Sparkles size={16} />
+                  </div>
+                  <div>
+                    <h4 className='text-xs font-black uppercase tracking-wider text-amber-950'>AI Tóm tắt Đánh giá Thực tế</h4>
+                    <p className='text-[11px] text-amber-800/80'>Tổng hợp từ {aiSummary.count} nhận xét của khách hàng đã mua</p>
+                  </div>
+                </div>
+                <span className='rounded-full bg-amber-200/60 px-2.5 py-0.5 text-[10px] font-bold text-amber-900'>
+                  AI Insights
+                </span>
+              </div>
+
+              <p className='mt-3 text-xs leading-relaxed text-zinc-800 font-medium'>
+                {aiSummary.overview}
+              </p>
+
+              <div className='mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3'>
+                {/* Ưu điểm nổi bật */}
+                {aiSummary.pros?.length > 0 && (
+                  <div className='rounded-xl bg-white/90 p-3 border border-emerald-100 shadow-2xs'>
+                    <div className='flex items-center gap-1.5 text-xs font-bold text-emerald-800'>
+                      <ThumbsUp size={13} className='text-emerald-600' />
+                      <span>Điểm nổi bật</span>
+                    </div>
+                    <ul className='mt-2 space-y-1.5 text-[11px] text-zinc-700'>
+                      {aiSummary.pros.map((pro, pIdx) => (
+                        <li key={pIdx} className='flex items-start gap-1.5'>
+                          <span className='mt-0.5 text-emerald-600 font-bold'>✓</span>
+                          <span>{pro}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Nhược điểm / Điểm cần lưu ý */}
+                {aiSummary.cons?.length > 0 && (
+                  <div className='rounded-xl bg-white/90 p-3 border border-rose-100 shadow-2xs'>
+                    <div className='flex items-center gap-1.5 text-xs font-bold text-rose-800'>
+                      <ThumbsDown size={13} className='text-rose-600' />
+                      <span>Điểm trừ / Cần lưu ý</span>
+                    </div>
+                    <ul className='mt-2 space-y-1.5 text-[11px] text-zinc-700'>
+                      {aiSummary.cons.map((con, cIdx) => (
+                        <li key={cIdx} className='flex items-start gap-1.5'>
+                          <span className='mt-0.5 text-rose-500 font-bold'>!</span>
+                          <span>{con}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+
+                {/* Lời khuyên chọn Size & Form dáng */}
+                {aiSummary.sizeAdvice?.length > 0 && (
+                  <div className='rounded-xl bg-white/90 p-3 border border-blue-100 shadow-2xs'>
+                    <div className='flex items-center gap-1.5 text-xs font-bold text-blue-900'>
+                      <Lightbulb size={13} className='text-blue-600' />
+                      <span>Lời khuyên chọn Size</span>
+                    </div>
+                    <ul className='mt-2 space-y-1.5 text-[11px] text-zinc-700'>
+                      {aiSummary.sizeAdvice.map((advice, aIdx) => (
+                        <li key={aIdx} className='flex items-start gap-1.5'>
+                          <span className='mt-0.5 text-blue-600 font-bold'>•</span>
+                          <span>{advice}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           <div className='divide-y divide-zinc-200 border-t border-zinc-200'>
             {paginatedReviews.length ? (
               paginatedReviews.map((review) => (

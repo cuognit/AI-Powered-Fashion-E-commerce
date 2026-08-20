@@ -2,7 +2,7 @@ import mongoose from 'mongoose'
 import Category from '../models/Category.js'
 import Attribute from '../models/Attribute.js'
 
-export const CATALOG_SORTS = new Set(['relevance', 'newest', 'price_asc', 'price_desc', 'name'])
+export const CATALOG_SORTS = new Set(['relevance', 'newest', 'price_asc', 'price_desc', 'name', 'best_selling', 'rating_desc'])
 export const ACTIVE_PRODUCT_FILTER = { is_deleted: false, business_enabled: { $ne: false }, status: 'available' }
 
 export class CatalogQueryError extends Error {
@@ -78,6 +78,8 @@ export function mongoSort(sort, relevanceFallback = { createdAt: -1, _id: -1 }) 
   if (sort === 'price_asc') return { sale_price: 1, base_price: 1, _id: 1 }
   if (sort === 'price_desc') return { sale_price: -1, base_price: -1, _id: -1 }
   if (sort === 'name') return { name: 1, _id: 1 }
+  if (sort === 'best_selling') return { sold_count: -1, _id: -1 }
+  if (sort === 'rating_desc') return { average_rating: -1, reviews_count: -1, _id: -1 }
   return relevanceFallback
 }
 

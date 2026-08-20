@@ -20,4 +20,10 @@ test('catalog query parses combined filters and produces accurate pagination met
   assert.equal(filter.variants.$elemMatch.stock.$gt, 0)
   assert.ok(filter.$expr.$and)
   assert.deepEqual(metaFor(100, parsed), { total_items: 100, current_page: 3, total_pages: 9, limit: 12 })
+
+  const parsedBestSeller = parseCatalogQuery({ sort: 'best_selling' })
+  assert.equal(parsedBestSeller.sort, 'best_selling')
+
+  const parsedRating = parseCatalogQuery({ sort: 'rating_desc' })
+  assert.equal(parsedRating.sort, 'rating_desc')
 })

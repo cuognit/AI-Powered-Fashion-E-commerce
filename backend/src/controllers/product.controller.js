@@ -1,6 +1,12 @@
 import mongoose from 'mongoose';
 import Product from '../models/product.model.js';
 import { getTextEmbedding, buildProductEmbeddingText } from '../services/ai.service.js';
+import {
+  embedProductDocument as embedGeminiDocument,
+  calculateContentHash as calculateGeminiHash,
+  buildProductEmbeddingText as buildGeminiEmbeddingText,
+} from '../services/geminiEmbedding.service.js';
+import { attachStatsToProducts, attachStatsToSingleProduct } from '../services/productStats.service.js';
 
 // Lấy danh sách sản phẩm (Có phân trang & lọc cơ bản)
 export const getProducts = async (req, res) => {
@@ -15,8 +21,9 @@ export const getProducts = async (req, res) => {
     if (req.query.category) query.category_id = req.query.category;
     if (req.query.brand) query.brand = req.query.brand;
 
-    const products = await Product.find(query).sort(sort).skip(skip).limit(limit);
+    const rawProducts = await Product.find(query).sort(sort).skip(skip).limit(limit);
     const total = await Product.countDocuments(query);
+    const products = await attachStatsToProducts(rawProducts);
 
     res.status(200).json({
       success: true,
@@ -46,29 +53,41 @@ export const getProductById = async (req, res) => {
     row.variants = row.variants.map((variant) => ({ ...variant, effective_price: variant.sale_price ?? variant.base_price ?? row.sale_price ?? row.base_price, images: (variant.image_asset_ids || []).map((id) => assetMap.get(String(id))).filter(Boolean) }));
     row.min_price = prices.length ? Math.min(...prices) : row.sale_price ?? row.base_price;
     row.max_price = prices.length ? Math.max(...prices) : row.min_price;
-    res.status(200).json({ success: true, data: row });
+    const enriched = await attachStatsToSingleProduct(row);
+    res.status(200).json({ success: true, data: enriched });
   } catch (error) {
     res.status(500).json({ success: false, message: error.message });
   }
 };
 
-// Thêm mới sản phẩm (Admin) - Tự động đồng bộ Vector Embedding với AI Worker
+// Thêm mới sản phẩm (Admin) - Tự động đồng bộ Vector Embedding với Gemini API
 export const createProduct = async (req, res) => {
   try {
     const productData = { ...req.body };
 
-    // Tự động tạo category_id nếu không được truyền vào
     if (!productData.category_id) {
       productData.category_id = new mongoose.Types.ObjectId();
     }
 
-    // Tự động sinh mảng embedding_vector nếu chưa có
-    if (!productData.embedding_vector || productData.embedding_vector.length === 0) {
-      const textToEmbed = buildProductEmbeddingText(productData);
-      const vector = await getTextEmbedding(textToEmbed);
-      if (vector && vector.length === 384) {
-        productData.embedding_vector = vector;
+    const geminiText = buildGeminiEmbeddingText(productData);
+    productData.embedding_content_hash = calculateGeminiHash(geminiText);
+
+    try {
+      const geminiVector = await embedGeminiDocument(geminiText);
+      if (Array.isArray(geminiVector) && geminiVector.length === 768) {
+        productData.gemini_embedding_vector = geminiVector;
+        productData.embedding_model = 'gemini-embedding-2';
+        productData.embedding_dimension = 768;
+        productData.embedding_status = 'ready';
+        productData.embedding_updated_at = new Date();
+      } else {
+        productData.gemini_embedding_vector = [];
+        productData.embedding_status = 'failed';
       }
+    } catch (geminiErr) {
+      productData.gemini_embedding_vector = [];
+      productData.embedding_status = 'failed';
+      console.warn(`[product.controller] Lỗi Gemini embedding: ${geminiErr.message}`);
     }
 
     const newProduct = await Product.create(productData);
@@ -84,24 +103,37 @@ export const updateProduct = async (req, res) => {
     const updateData = { ...req.body };
     const productId = req.params.id;
 
-    // Nếu có thay đổi tên, mô tả hoặc thương hiệu -> Tự động sinh lại vector mới
-    if (updateData.name || updateData.description || updateData.brand) {
-      const existingProduct = await Product.findById(productId);
-      if (existingProduct) {
-        const mergedProduct = { ...existingProduct.toObject(), ...updateData };
-        const textToEmbed = buildProductEmbeddingText(mergedProduct);
-        const vector = await getTextEmbedding(textToEmbed);
-        if (vector && vector.length === 384) {
-          updateData.embedding_vector = vector;
+    const existingProduct = await Product.findById(productId);
+    if (!existingProduct) {
+      return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm' });
+    }
+
+    const mergedProduct = { ...existingProduct.toObject(), ...updateData };
+    const geminiText = buildGeminiEmbeddingText(mergedProduct);
+    const newHash = calculateGeminiHash(geminiText);
+
+    if (existingProduct.embedding_content_hash !== newHash || existingProduct.embedding_status !== 'ready') {
+      updateData.embedding_content_hash = newHash;
+      try {
+        const geminiVector = await embedGeminiDocument(geminiText);
+        if (Array.isArray(geminiVector) && geminiVector.length === 768) {
+          updateData.gemini_embedding_vector = geminiVector;
+          updateData.embedding_model = 'gemini-embedding-2';
+          updateData.embedding_dimension = 768;
+          updateData.embedding_status = 'ready';
+          updateData.embedding_updated_at = new Date();
+        } else {
+          updateData.gemini_embedding_vector = [];
+          updateData.embedding_status = 'failed';
         }
+      } catch (geminiErr) {
+        updateData.gemini_embedding_vector = [];
+        updateData.embedding_status = 'failed';
+        console.warn(`[product.controller] Lỗi Gemini embedding khi update: ${geminiErr.message}`);
       }
     }
 
     const updatedProduct = await Product.findByIdAndUpdate(productId, updateData, { new: true });
-    if (!updatedProduct) {
-      return res.status(404).json({ success: false, message: 'Không tìm thấy sản phẩm' });
-    }
-
     res.status(200).json({ success: true, message: 'Cập nhật sản phẩm thành công', data: updatedProduct });
   } catch (error) {
     res.status(400).json({ success: false, message: error.message });
@@ -482,13 +514,32 @@ export const seedProducts = async (req, res) => {
       }
     ];
 
-    // Tự động sinh Vector Embedding 384 chiều từ AI Worker cho dữ liệu mẫu
+    // Tự động sinh Vector Embedding Gemini 768 chiều & Legacy 384 chiều cho dữ liệu mẫu
     for (const p of sampleProducts) {
+      const geminiText = buildGeminiEmbeddingText(p);
+      p.embedding_content_hash = calculateGeminiHash(geminiText);
+      try {
+        const gVector = await embedGeminiDocument(geminiText);
+        if (Array.isArray(gVector) && gVector.length === 768) {
+          p.gemini_embedding_vector = gVector;
+          p.embedding_model = 'gemini-embedding-2';
+          p.embedding_dimension = 768;
+          p.embedding_status = 'ready';
+          p.embedding_updated_at = new Date();
+        }
+      } catch {
+        p.embedding_status = 'pending';
+      }
+
       if (!p.embedding_vector || p.embedding_vector.length !== 384) {
-        const text = buildProductEmbeddingText(p);
-        const vector = await getTextEmbedding(text);
-        if (vector && vector.length === 384) {
-          p.embedding_vector = vector;
+        try {
+          const text = buildProductEmbeddingText(p);
+          const vector = await getTextEmbedding(text);
+          if (vector && vector.length === 384) {
+            p.embedding_vector = vector;
+          }
+        } catch {
+          // Ignored
         }
       }
     }
