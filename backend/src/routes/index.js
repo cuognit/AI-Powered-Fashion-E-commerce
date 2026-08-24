@@ -16,6 +16,7 @@ import adminAnalyticsRoutes from './adminAnalytics.routes.js'
 import wishlistRoutes from './wishlist.routes.js'
 import notificationRoutes from './notification.routes.js'
 import chatRoutes from './chat.routes.js'
+import vtonRoutes from './vton.routes.js'
 
 const router = Router()
 
@@ -28,6 +29,7 @@ router.use('/cart', cartRoutes)
 router.use('/payments', paymentRoutes)
 router.use('/notifications', notificationRoutes)
 router.use('/chat', chatRoutes)
+router.use('/try-on', vtonRoutes)
 router.use('/admin/analytics', adminAnalyticsRoutes)
 router.use('/admin/orders', adminOrderRoutes)
 router.use('/admin/users', adminUserRoutes)

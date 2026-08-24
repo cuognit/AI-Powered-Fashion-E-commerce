@@ -45,6 +45,17 @@ const env = {
     ragTopK: Number(process.env.CHAT_RAG_TOP_K) || 6,
     orderContextLimit: Number(process.env.CHAT_ORDER_CONTEXT_LIMIT) || 3,
   },
+  vton: {
+    hfToken:
+      process.env.HF_ACCESS_TOKEN ||
+      process.env.HF_TOKEN ||
+      process.env.HUGGINGFACE_TOKEN ||
+      process.env.HUGGING_FACE_TOKEN ||
+      process.env.HUGGING_FACE_HUB_TOKEN ||
+      '',
+    spaceId: process.env.HF_VTON_SPACE_ID || 'yisol/IDM-VTON',
+    timeoutMs: Number(process.env.VTON_TIMEOUT_MS) || 120000,
+  },
 }
 
 export default env

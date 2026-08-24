@@ -41,3 +41,5 @@ export async function verifyToken(request, _response, next) {
     next(error instanceof AppError ? error : new AppError('Token không hợp lệ hoặc đã hết hạn', 401))
   }
 }
+
+export default verifyToken

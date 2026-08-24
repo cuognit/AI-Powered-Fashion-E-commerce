@@ -704,6 +704,14 @@ export default function ProductDetail() {
                 <ArrowRight size={18} />
               </button>
             </div>
+            <button
+              type='button'
+              onClick={() => navigate(`/ai-try-on?productId=${product._id}${variant?.sku ? `&variant=${variant.sku}` : ''}`)}
+              className='mt-3 flex h-13 w-full items-center justify-center gap-2 border-2 border-purple-600 bg-purple-50 px-5 text-xs font-bold uppercase tracking-wider text-purple-700 shadow-sm transition-all duration-200 hover:bg-purple-600 hover:text-white active:scale-[0.98] cursor-pointer'
+            >
+              <Sparkles size={16} />
+              <span>✨ Thử đồ ảo bằng AI (Virtual Try-On)</span>
+            </button>
           </div>
         </section>
       </div>
