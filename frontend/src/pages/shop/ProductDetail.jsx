@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import toast from 'react-hot-toast'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import FavoriteButton from '../../components/FavoriteButton.jsx'
+import CompareButton from '../../components/comparison/CompareButton.jsx'
 import { getProductById } from '../../services/productApi.js'
 import { addReview, deleteReview, getReviewAiSummary, getReviewEligibility, getReviewsByProduct, updateReview } from '../../services/reviewApi.js'
 import useAuth from '../../hooks/useAuth.js'
@@ -577,6 +578,7 @@ export default function ProductDetail() {
               <h1 className='text-4xl font-black uppercase leading-tight'>{product.name}</h1>
               <FavoriteButton product={product} />
             </div>
+            <CompareButton productId={product._id} className='mt-4 w-full sm:w-auto' />
             <div className='mt-4 flex flex-wrap items-center justify-between gap-3 border-b border-zinc-200 pb-4'>
               <div className='flex items-center gap-3 text-2xl font-bold'>
                 <span>{price.toLocaleString('vi-VN')} đ</span>

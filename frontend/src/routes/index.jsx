@@ -15,6 +15,7 @@ import AITryOn from '../pages/shop/AITryOn.jsx'
 import Cart from '../pages/shop/Cart.jsx'
 import Checkout from '../pages/shop/Checkout.jsx'
 import CatalogPage from '../pages/shop/CatalogPage.jsx'
+import CompareProducts from '../pages/shop/CompareProducts.jsx'
 import Home from '../pages/shop/Home.jsx'
 import InfoPage from '../pages/shop/InfoPage.jsx'
 import NewArrivals from '../pages/shop/NewArrivals.jsx'
@@ -35,6 +36,7 @@ const router = createBrowserRouter([
     children: [
       { path: '/', element: <Home /> },
       { path: '/collections', element: <CatalogPage /> },
+      { path: '/compare', element: <CompareProducts /> },
       { path: '/shop', element: <CatalogPage /> },
       { path: '/new-arrivals', element: <NewArrivals /> },
       { path: '/ai-try-on', element: <AITryOn /> },

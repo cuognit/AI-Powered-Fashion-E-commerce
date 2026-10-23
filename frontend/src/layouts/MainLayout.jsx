@@ -3,12 +3,14 @@ import Header from '../components/Header'
 import Footer from '../components/Footer'
 import WishlistSync from '../components/WishlistSync.jsx'
 import ChatWidget from '../components/ChatWidget.jsx'
+import ComparisonBar from '../components/comparison/ComparisonBar.jsx'
 
 export default function MainLayout() {
   return (
     <div className='shop-shell flex min-h-screen flex-col bg-[#fafafa] font-sans text-gray-900 selection:bg-black selection:text-white'>
       <WishlistSync />
       <Header />
+      <ComparisonBar />
       <main className='flex-grow'>
         <Outlet />
       </main>
