@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { ChevronRight, Heart, History, LogOut, ShieldCheck, ShoppingBag, User } from 'lucide-react'
+import { ChevronRight, Heart, History, LogOut, MapPin, ShieldCheck, ShoppingBag, User } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import toast from 'react-hot-toast'
 import useAuth from '../hooks/useAuth.js'
@@ -22,6 +22,7 @@ export default function UserDropdown({ isOpen, onClose }) {
   const menuItems = [
     ...(isAdmin ? [{ label: 'Trang quản trị', path: '/admin', icon: ShieldCheck, badge: 'QUẢN TRỊ' }] : []),
     { label: 'Hồ sơ của tôi', path: '/profile', icon: User },
+    { label: 'Sổ địa chỉ', path: '/profile/addresses', icon: MapPin },
     { label: 'Đơn hàng của tôi', path: '/orders', icon: History },
     { label: 'Sản phẩm yêu thích', path: '/wishlist', icon: Heart, countBadge: wishlistCount || null },
     { label: 'Giỏ hàng', path: '/cart', icon: ShoppingBag, countBadge: cartItemCount || null },

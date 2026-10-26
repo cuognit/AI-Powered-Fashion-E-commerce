@@ -12,6 +12,7 @@ import ManageAttributes from '../pages/admin/ManageAttributes.jsx'
 import AdminPlaceholder from '../components/admin/AdminPlaceholder.jsx'
 import AuthPage from '../pages/auth/AuthPage.jsx'
 import AITryOn from '../pages/shop/AITryOn.jsx'
+import AddressBookPage from '../pages/shop/AddressBookPage.jsx'
 import Cart from '../pages/shop/Cart.jsx'
 import Checkout from '../pages/shop/Checkout.jsx'
 import CatalogPage from '../pages/shop/CatalogPage.jsx'
@@ -53,6 +54,7 @@ const router = createBrowserRouter([
           { path: '/checkout', element: <CheckoutRoute><Checkout /></CheckoutRoute> },
           { path: '/payment/result', element: <PaymentResult /> },
           { path: '/profile', element: <ProfilePage /> },
+          { path: '/profile/addresses', element: <AddressBookPage /> },
           { path: '/profile/orders', element: <OrderHistory /> },
           { path: '/orders', element: <OrderHistory /> },
           { path: '/wishlist', element: <Wishlist /> },

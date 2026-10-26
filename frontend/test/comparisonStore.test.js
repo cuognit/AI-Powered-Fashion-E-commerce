@@ -2,7 +2,6 @@ import assert from 'node:assert/strict'
 import { beforeEach, test } from 'node:test'
 import useComparisonStore, { MAX_COMPARISON_PRODUCTS } from '../src/store/comparisonStore.js'
 
-// Chỉ kiểm tra state trong bộ nhớ; ID C/D là dữ liệu test, không truy vấn database.
 const A = '6a870328541fd91e90da7691'
 const B = '6a870328541fd91e90da721f'
 const C = '000000000000000000000003'

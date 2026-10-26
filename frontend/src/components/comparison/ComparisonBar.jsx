@@ -12,7 +12,6 @@ export default function ComparisonBar() {
 
   if (!count) return null
 
-  // Nằm trong luồng layout để không che chatbot hoặc nội dung trên mobile.
   return (
     <section aria-label='Danh sách sản phẩm đã chọn so sánh' className='border-b border-neutral-300 bg-[#f7f6f3]'>
       <div className='mx-auto max-w-[1360px] space-y-3 px-4 py-4 sm:px-6 lg:px-8'>

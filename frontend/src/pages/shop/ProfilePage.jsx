@@ -3,6 +3,7 @@ import { AtSign, KeyRound, Loader2, MapPin, Phone, Save, UserRound } from 'lucid
 import { useCallback, useEffect, useState } from 'react'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
+import { Link } from 'react-router-dom'
 import { z } from 'zod'
 import useAuth from '../../hooks/useAuth.js'
 import { changePassword as changePasswordRequest, getProfile, updateProfile as updateProfileRequest } from '../../services/authApi.js'
@@ -119,6 +120,9 @@ export default function ProfilePage() {
           <p className="text-xs font-bold uppercase tracking-[.25em] text-neutral-500">Tài khoản</p>
           <h1 className="mt-2 text-3xl font-black uppercase sm:text-5xl">Hồ sơ của tôi</h1>
           <p className="mt-2 text-sm text-neutral-600">Quản lý thông tin cá nhân và mật khẩu tài khoản của bạn.</p>
+          <Link to="/profile/addresses" className="mt-4 inline-flex min-h-11 items-center gap-2 border border-black bg-white px-4 py-2.5 text-xs font-bold uppercase tracking-wide transition hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-black">
+            <MapPin className="h-4 w-4" aria-hidden="true" /> Sổ địa chỉ
+          </Link>
         </div>
 
         {loading ? (

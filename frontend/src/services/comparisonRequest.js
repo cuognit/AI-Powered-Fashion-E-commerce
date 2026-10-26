@@ -6,7 +6,6 @@ function timeoutError(timeout) {
   return Object.assign(new Error(`Product API phản hồi quá chậm (quá ${timeout / 1000} giây). Vui lòng thử tải lại.`), { code: 'COMPARISON_TIMEOUT' })
 }
 
-// client được truyền vào để dùng lại axiosClient và kiểm thử bằng Axios adapter giả.
 export function requestComparisonProduct(client, id, { signal, timeout = COMPARISON_TIMEOUT_MS } = {}) {
   const controller = new AbortController()
 
@@ -31,7 +30,6 @@ export function requestComparisonProduct(client, id, { signal, timeout = COMPARI
     }
     signal?.addEventListener('abort', cancel, { once: true })
 
-    // Giới hạn cả thời gian chờ interceptor; timeout Axios riêng có thể chưa đủ.
     timer = setTimeout(() => {
       finish(reject, timeoutError(timeout))
       controller.abort()

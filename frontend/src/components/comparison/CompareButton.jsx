@@ -4,13 +4,11 @@ import useComparisonStore, { MAX_COMPARISON_PRODUCTS } from '../../store/compari
 
 export default function CompareButton({ productId, className = '' }) {
   const id = typeof productId === 'string' ? productId.trim().toLowerCase() : ''
-  // Chỉ theo dõi boolean của sản phẩm này, không đăng ký toàn bộ store.
   const isSelected = useComparisonStore((state) => state.selectedIds.includes(id))
   const addProduct = useComparisonStore((state) => state.addProduct)
   const removeProduct = useComparisonStore((state) => state.removeProduct)
 
   const onClick = (event) => {
-    // Nút nằm ngoài Link; chặn sự kiện lan lên các vùng có onClick ở cấp cha.
     event.stopPropagation()
     const result = isSelected ? removeProduct(id) : addProduct(id)
 

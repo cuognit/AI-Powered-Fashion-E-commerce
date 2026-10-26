@@ -7,7 +7,7 @@ import { COMPARISON_TIMEOUT_MS, requestComparisonProduct } from '../src/services
 
 const A = '6a870328541fd91e90da7691'
 const B = '6a870328541fd91e90da721f'
-const TIMEOUT = 25 // Dùng timer thật nhưng rút ngắn thời gian test; production vẫn là 12 giây.
+const TIMEOUT = 25
 const response = (id) => ({ data: { success: true, data: { _id: id } }, status: 200, headers: {} })
 const deferred = () => {
   let resolve
@@ -16,8 +16,6 @@ const deferred = () => {
 }
 const tick = () => new Promise((resolve) => setImmediate(resolve))
 
-// Chạy chính effect và hàm thông báo lỗi của trang, không sao chép thuật toán tải.
-// Đây là kiểm thử vòng đời effect với setter giả, không phải kiểm thử DOM/React renderer.
 const page = readFileSync(new URL('../src/pages/shop/CompareProducts.jsx', import.meta.url), 'utf8')
 const errorMessage = new Function(`${page.slice(page.indexOf('function requestErrorMessage'), page.indexOf('export default'))}; return requestErrorMessage`)()
 const marker = '  useEffect(() => {'
@@ -26,10 +24,12 @@ const effect = new Function('selectedIds', 'getComparisonProduct', 'setLoading',
 
 function start(ids, adapter, state = {}) {
   const configs = []
-  const client = axios.create({ adapter: (config) => {
-    configs.push(config)
-    return adapter(config.url.split('/').at(-1), config)
-  } })
+  const client = axios.create({
+    adapter: (config) => {
+      configs.push(config)
+      return adapter(config.url.split('/').at(-1), config)
+    }
+  })
   let done
   const completed = new Promise((resolve) => { done = resolve })
   const cleanup = effect(ids,
@@ -63,7 +63,7 @@ test('một thành công, một HTTP 404: giữ sản phẩm thành công và l�
 })
 
 test('một thành công, một treo: timer thật kết thúc loading, abort request và báo timeout', { timeout: 2000 }, async () => {
-  const run = start([A, B], (id) => id === A ? Promise.resolve(response(A)) : new Promise(() => {}))
+  const run = start([A, B], (id) => id === A ? Promise.resolve(response(A)) : new Promise(() => { }))
   await run.completed
   assert.equal(run.state.loading, false)
   assert.deepEqual(run.state.products.map((p) => p._id), [A])
@@ -74,7 +74,7 @@ test('một thành công, một treo: timer thật kết thúc loading, abort re
 })
 
 test('cả hai API treo: timer thật kết thúc loading và trả hai lỗi', { timeout: 2000 }, async () => {
-  const run = start([A, B], () => new Promise(() => {}))
+  const run = start([A, B], () => new Promise(() => { }))
   await run.completed
   assert.equal(run.state.loading, false)
   assert.deepEqual(run.state.products, [])
@@ -85,7 +85,7 @@ test('cả hai API treo: timer thật kết thúc loading và trả hai lỗi', 
 
 test('đổi selectedIds: cleanup abort lựa chọn cũ; chỉ cập nhật lựa chọn mới', { timeout: 2000 }, async () => {
   const state = {}
-  const old = start([A], () => new Promise(() => {}), state)
+  const old = start([A], () => new Promise(() => { }), state)
   await tick()
   old.cleanup()
   const current = start([B], () => Promise.resolve(response(B)), state)
@@ -98,7 +98,7 @@ test('đổi selectedIds: cleanup abort lựa chọn cũ; chỉ cập nhật l�
 })
 
 test('unmount: hủy request, không cập nhật setter sau cleanup', { timeout: 2000 }, async () => {
-  const run = start([A], () => new Promise(() => {}))
+  const run = start([A], () => new Promise(() => { }))
   await tick()
   run.cleanup()
   const snapshot = structuredClone(run.state)
@@ -109,7 +109,7 @@ test('unmount: hủy request, không cập nhật setter sau cleanup', { timeout
 
 test('retry sau timeout: effect mới tải thành công và xóa lỗi cũ', { timeout: 2000 }, async () => {
   const state = {}
-  const first = start([A, B], () => new Promise(() => {}), state)
+  const first = start([A, B], () => new Promise(() => { }), state)
   await first.completed
   assert.equal(state.errors.length, 2)
   first.cleanup()
@@ -142,7 +142,7 @@ test('hủy chủ động khác timeout; tín hiệu hủy sẵn không gửi re
   controller.abort()
   await assert.rejects(requestComparisonProduct({ get: () => assert.fail('Không được gọi API') }, A, { signal: controller.signal }), { code: 'ERR_CANCELED' })
   const current = new AbortController()
-  const pending = requestComparisonProduct({ get: () => new Promise(() => {}) }, A, { signal: current.signal })
+  const pending = requestComparisonProduct({ get: () => new Promise(() => { }) }, A, { signal: current.signal })
   current.abort()
   await assert.rejects(pending, { code: 'ERR_CANCELED' })
   assert.equal(getEventListeners(current.signal, 'abort').length, 0)
@@ -150,7 +150,7 @@ test('hủy chủ động khác timeout; tín hiệu hủy sẵn không gửi re
 
 test('deadline vẫn kết thúc khi Axios response interceptor bị treo', { timeout: 2000 }, async () => {
   const client = axios.create({ adapter: () => Promise.resolve(response(A)) })
-  client.interceptors.response.use(() => new Promise(() => {}))
+  client.interceptors.response.use(() => new Promise(() => { }))
   await assert.rejects(requestComparisonProduct(client, A, { timeout: TIMEOUT }), { code: 'COMPARISON_TIMEOUT' })
 })
 

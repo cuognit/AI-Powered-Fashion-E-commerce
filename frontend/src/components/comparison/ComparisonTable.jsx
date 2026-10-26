@@ -41,7 +41,6 @@ export default function ComparisonTable({ products }) {
         <thead>
           <tr>
             <th scope='col' className='sticky left-0 z-20 w-36 border-b border-r border-neutral-300 bg-neutral-100 px-4 py-6 align-bottom text-xs font-bold uppercase tracking-wider sm:w-44 sm:px-6'>Tiêu chí</th>
-            {/* Mỗi sản phẩm tạo một cột; _id là key ổn định của sản phẩm. */}
             {products.map((product, index) => (
               <th key={product._id} scope='col' className='border-b border-neutral-300 bg-[#f7f6f3] px-5 py-6 align-top sm:px-6'>
                 <span className='text-[10px] font-bold uppercase tracking-[0.2em] text-neutral-500'>Sản phẩm {String(index + 1).padStart(2, '0')}</span>

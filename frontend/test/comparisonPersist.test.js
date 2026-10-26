@@ -2,7 +2,6 @@ import assert from 'node:assert/strict'
 import { afterEach, beforeEach, test } from 'node:test'
 import { COMPARISON_STORAGE_KEY } from '../src/store/comparisonStore.js'
 
-// Storage giả lập chỉ nằm trong RAM; mỗi import mới tạo store mới như tải lại trang.
 const A = '6a870328541fd91e90da7691'
 const B = '6a870328541fd91e90da721f'
 const C = '000000000000000000000003'

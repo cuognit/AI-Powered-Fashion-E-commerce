@@ -53,7 +53,6 @@ export default function ProductCard({ product, showBadge, index = 0, className =
           />
         </Link>
 
-        {/* Top-left Badges Container */}
         <div className='absolute left-2.5 top-2.5 z-10 flex flex-col items-start gap-1.5 pointer-events-none'>
           {showBadge === 'new' ? (
             <span className='bg-black px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm'>

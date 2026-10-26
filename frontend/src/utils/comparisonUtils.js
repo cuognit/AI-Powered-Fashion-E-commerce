@@ -17,7 +17,6 @@ function uniqueText(values) {
 }
 
 function priceRange(product) {
-  // Ưu tiên khoảng giá API; không tính lại giá từ biến thể hoặc đoán khuyến mãi.
   if (product.min_price != null || product.max_price != null) {
     const min = product.min_price
     const max = product.max_price ?? min
@@ -39,7 +38,6 @@ export function normalizeComparisonProduct(input) {
   }
   const attributes = new Map()
 
-  // Giữ tên/khóa thuộc tính do API cung cấp, không phân tích tên hay mô tả sản phẩm.
   for (const option of variants.flatMap(optionsOf)) {
     const slug = text(option.attribute_slug)
     if (colorSlugs.has(slug) || sizeSlugs.has(slug)) continue

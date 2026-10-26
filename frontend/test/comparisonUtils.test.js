@@ -25,11 +25,13 @@ test('thiếu giá, giá âm, NaN, Infinity, chuỗi số và khoảng giá đ�
 })
 
 test('ưu tiên option_values cho từng biến thể, loại trùng màu/size và giữ thứ tự đầu tiên', () => {
-  const product = normalizeComparisonProduct({ variants: [
-    { color: 'Giá trị cũ', size: 'Cũ', option_values: [option('mau-sac', 'Màu sắc', ' Trắng '), option('kich-thuoc', 'Kích thước', 'M')] },
-    { option_values: [option('mau-sac', 'Màu sắc', 'trắng'), option('kich-thuoc', 'Kích thước', 'L')] },
-    { color: 'Đen', size: 'M' },
-  ] })
+  const product = normalizeComparisonProduct({
+    variants: [
+      { color: 'Giá trị cũ', size: 'Cũ', option_values: [option('mau-sac', 'Màu sắc', ' Trắng '), option('kich-thuoc', 'Kích thước', 'M')] },
+      { option_values: [option('mau-sac', 'Màu sắc', 'trắng'), option('kich-thuoc', 'Kích thước', 'L')] },
+      { color: 'Đen', size: 'M' },
+    ]
+  })
   assert.deepEqual(product.colors, ['Trắng', 'Đen'])
   assert.deepEqual(product.sizes, ['M', 'L'])
   assert.deepEqual(product.attributes, [])
@@ -41,10 +43,12 @@ test('SKU được tổng hợp từ nhiều biến thể, bỏ giá trị rỗn
 })
 
 test('thuộc tính động bất kỳ được gom theo khóa với tên hiển thị từ API', () => {
-  const product = normalizeComparisonProduct({ variants: [
-    { option_values: [option('chat-lieu', 'Chất liệu', 'Cotton'), option('ket-cau-det', 'Kết cấu dệt', 'Dệt chéo')] },
-    { option_values: [option('chat-lieu', 'Chất liệu', 'cotton'), option('ket-cau-det', 'Kết cấu dệt', 'Dệt trơn')] },
-  ] })
+  const product = normalizeComparisonProduct({
+    variants: [
+      { option_values: [option('chat-lieu', 'Chất liệu', 'Cotton'), option('ket-cau-det', 'Kết cấu dệt', 'Dệt chéo')] },
+      { option_values: [option('chat-lieu', 'Chất liệu', 'cotton'), option('ket-cau-det', 'Kết cấu dệt', 'Dệt trơn')] },
+    ]
+  })
   assert.deepEqual(product.attributes, [
     { key: 'attribute:chat-lieu', label: 'Chất liệu', values: ['Cotton'] },
     { key: 'attribute:ket-cau-det', label: 'Kết cấu dệt', values: ['Dệt chéo', 'Dệt trơn'] },

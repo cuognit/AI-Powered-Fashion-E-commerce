@@ -36,13 +36,11 @@ export default function CompareProducts() {
         return
       }
 
-      // Giữ kết quả riêng cho từng ID: một request lỗi không loại bỏ sản phẩm còn lại.
       const results = await Promise.allSettled(selectedIds.map(async (id) => {
         const response = await getComparisonProduct(id, { signal: controller.signal })
         const payload = response?.data
         const product = payload?.data
 
-        // Axios response.data là JSON; JSON.data mới là đối tượng sản phẩm.
         if (payload?.success !== true || !product || Array.isArray(product)
           || typeof product._id !== 'string' || product._id.toLowerCase() !== id.toLowerCase()) {
           throw new Error('Response API không đúng cấu trúc { success: true, data: product } hoặc không khớp ID yêu cầu.')
@@ -51,7 +49,6 @@ export default function CompareProducts() {
         return product
       }))
 
-      // Cleanup đánh dấu effect cũ hết hiệu lực khi unmount hoặc bắt đầu lần tải khác.
       if (!active) return
 
       const loadedProducts = []
@@ -73,7 +70,6 @@ export default function CompareProducts() {
     }
   }, [selectedIds, retryCount])
 
-  // Ẩn ngay kết quả cũ khi lựa chọn đổi, kể cả trước khi effect mới chạy.
   const isCurrentSelection = loadedIds === selectedIds
   const isLoading = selectedIds.length > 0 && (loading || !isCurrentSelection)
   const comparisonProducts = isCurrentSelection ? products.map(normalizeComparisonProduct) : []

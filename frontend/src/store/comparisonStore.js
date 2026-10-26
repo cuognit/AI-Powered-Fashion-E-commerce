@@ -24,8 +24,6 @@ function restoreSelectedIds(value) {
   return selectedIds
 }
 
-// Persist truyền vào/nhận lại object { state, version }; localStorage chỉ lưu chuỗi.
-// Trình duyệt có thể chặn storage hoặc chứa JSON hỏng: khi đó vẫn dùng state trong RAM.
 const comparisonStorage = {
   getItem: (name) => {
     try {
@@ -52,12 +50,10 @@ const useComparisonStore = create(persist((set, get) => ({
     const id = normalizeProductId(productId)
     if (!id) return { success: false, reason: 'invalid_id' }
 
-    // get() đọc lựa chọn mới nhất, kể cả sau các lần thêm/xóa trước đó.
     const { selectedIds } = get()
     if (selectedIds.includes(id)) return { success: false, reason: 'duplicate' }
     if (selectedIds.length >= MAX_COMPARISON_PRODUCTS) return { success: false, reason: 'limit_reached' }
 
-    // Tạo mảng mới thay vì push() trực tiếp vào mảng trong store.
     set({ selectedIds: [...selectedIds, id] })
     return { success: true }
   },
@@ -79,7 +75,6 @@ const useComparisonStore = create(persist((set, get) => ({
   name: COMPARISON_STORAGE_KEY,
   storage: comparisonStorage,
   partialize: (state) => ({ selectedIds: state.selectedIds }),
-  // Chỉ lấy ID đã kiểm tra; không cho dữ liệu lưu ghi đè action hoặc thêm field lạ.
   merge: (persistedState, currentState) => ({
     ...currentState,
     selectedIds: restoreSelectedIds(persistedState?.selectedIds),
