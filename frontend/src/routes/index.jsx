@@ -12,9 +12,11 @@ import ManageAttributes from '../pages/admin/ManageAttributes.jsx'
 import AdminPlaceholder from '../components/admin/AdminPlaceholder.jsx'
 import AuthPage from '../pages/auth/AuthPage.jsx'
 import AITryOn from '../pages/shop/AITryOn.jsx'
+import AddressBookPage from '../pages/shop/AddressBookPage.jsx'
 import Cart from '../pages/shop/Cart.jsx'
 import Checkout from '../pages/shop/Checkout.jsx'
 import CatalogPage from '../pages/shop/CatalogPage.jsx'
+import CompareProducts from '../pages/shop/CompareProducts.jsx'
 import Home from '../pages/shop/Home.jsx'
 import InfoPage from '../pages/shop/InfoPage.jsx'
 import NewArrivals from '../pages/shop/NewArrivals.jsx'
@@ -35,6 +37,7 @@ const router = createBrowserRouter([
     children: [
       { path: '/', element: <Home /> },
       { path: '/collections', element: <CatalogPage /> },
+      { path: '/compare', element: <CompareProducts /> },
       { path: '/shop', element: <CatalogPage /> },
       { path: '/new-arrivals', element: <NewArrivals /> },
       { path: '/ai-try-on', element: <AITryOn /> },
@@ -51,6 +54,7 @@ const router = createBrowserRouter([
           { path: '/checkout', element: <CheckoutRoute><Checkout /></CheckoutRoute> },
           { path: '/payment/result', element: <PaymentResult /> },
           { path: '/profile', element: <ProfilePage /> },
+          { path: '/profile/addresses', element: <AddressBookPage /> },
           { path: '/profile/orders', element: <OrderHistory /> },
           { path: '/orders', element: <OrderHistory /> },
           { path: '/wishlist', element: <Wishlist /> },

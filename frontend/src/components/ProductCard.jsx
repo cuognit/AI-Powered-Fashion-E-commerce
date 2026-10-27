@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { Star } from 'lucide-react'
 import FavoriteButton from './FavoriteButton.jsx'
+import CompareButton from './comparison/CompareButton.jsx'
 import { formatCurrency } from '../utils/formatCurrency.js'
 
 const FALLBACK_IMAGE = `data:image/svg+xml,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="600" height="800"><rect width="100%" height="100%" fill="#eee"/><text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial" font-size="28" fill="#777">AESTHETIX</text></svg>')}`
@@ -52,7 +53,6 @@ export default function ProductCard({ product, showBadge, index = 0, className =
           />
         </Link>
 
-        {/* Top-left Badges Container */}
         <div className='absolute left-2.5 top-2.5 z-10 flex flex-col items-start gap-1.5 pointer-events-none'>
           {showBadge === 'new' ? (
             <span className='bg-black px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-white shadow-sm'>
@@ -97,6 +97,7 @@ export default function ProductCard({ product, showBadge, index = 0, className =
           {sale && <span className='font-mono text-xs text-neutral-400 line-through'>{formatCurrency(product.base_price)}</span>}
         </div>
       </Link>
+      <CompareButton productId={product._id} className='mt-3 w-full' />
     </motion.article>
   )
 }
